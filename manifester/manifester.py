@@ -2,7 +2,6 @@ import random
 import string
 from pathlib import Path
 
-import requests
 from logzero import logger
 
 from manifester.helpers import simple_retry
@@ -13,7 +12,11 @@ from manifester.settings import settings
 class Manifester:
     def __init__(self, manifest_category, allocation_name=None, **kwargs):
         self.allocation_name = allocation_name or "".join(random.sample(string.ascii_letters, 10))
-        # self.manifest_name = kwargs.get("manifest_name")
+        if kwargs.get("requester") is not None:
+            self.requester = kwargs["requester"]
+        else:
+            import requests
+            self.requester = requests
         self.offline_token = kwargs.get("offline_token", settings.offline_token)
         manifest_data = settings.manifest_category.get(manifest_category)
         self.subscription_data = manifest_data.subscription_data
@@ -33,7 +36,7 @@ class Manifester:
             token_request_data = {"data": self.token_request_data}
             logger.debug("Generating access token")
             token_data = simple_retry(
-                requests.post,
+                self.requester.post,
                 cmd_args=["https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"],
                 cmd_kwargs=token_request_data,
             ).json()
@@ -50,7 +53,7 @@ class Manifester:
             },
         }
         self.allocation = simple_retry(
-            requests.post,
+            self.requester.post,
             cmd_args=["https://api.access.redhat.com/management/v1/allocations"],
             cmd_kwargs=allocation_data,
         ).json()
@@ -69,7 +72,7 @@ class Manifester:
                 "params": {"offset": _offset},
             }
             self._subscription_pools = simple_retry(
-                requests.get,
+                self.requester.get,
                 cmd_args=[f"https://api.access.redhat.com/management/v1/allocations/{self.allocation_uuid}/pools"],
                 cmd_kwargs=data,
             ).json()
@@ -85,7 +88,7 @@ class Manifester:
                     "params": {"offset": _offset},
                 }
                 offset_pools = simple_retry(
-                    requests.get,
+                    self.requester.get,
                     cmd_args=[f"https://api.access.redhat.com/management/v1/allocations/{self.allocation_uuid}/pools"],
                     cmd_kwargs=data,
                 ).json()
@@ -101,7 +104,7 @@ class Manifester:
             "params": {"pool": f"{pool_id}", "quantity": f"{entitlement_quantity}"},
         }
         add_entitlements = simple_retry(
-            requests.post,
+            self.requester.post,
             cmd_args=[f"https://api.access.redhat.com/management/v1/allocations/{self.allocation_uuid}/entitlements"],
             cmd_kwargs=data,
         )
@@ -114,7 +117,7 @@ class Manifester:
             "params": {"include": "entitlements"},
         }
         self.entitlement_data = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[f"https://api.access.redhat.com/management/v1/allocations/{self.allocation_uuid}"],
             cmd_kwargs=data,
         ).json()
@@ -193,7 +196,7 @@ class Manifester:
         local_file.parent.mkdir(parents=True, exist_ok=True)
         logger.info(f"Triggering manifest export job for subscription allocation {self.allocation_name}")
         trigger_export_job = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[
                 f"https://api.access.redhat.com/management/v1/allocations/{self.allocation_uuid}/export"
             ],
@@ -201,14 +204,14 @@ class Manifester:
         ).json()
         export_job_id = trigger_export_job["body"]["exportJobID"]
         export_job = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[f"https://api.access.redhat.com/management/v1/allocations/{self.allocation_uuid}/exportJob/{export_job_id}"],
             cmd_kwargs=headers,
         )
         request_count = 1
         while export_job.status_code != 200:
             export_job = simple_retry(
-                requests.get,
+                self.requester.get,
                 cmd_args=[f"https://api.access.redhat.com/management/v1/allocations/{self.allocation_uuid}/exportJob/{export_job_id}"],
                 cmd_kwargs=headers,
             )
@@ -227,7 +230,7 @@ class Manifester:
         export_job = export_job.json()
         export_href = export_job["body"]["href"]
         manifest = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[f"{export_href}"],
             cmd_kwargs=headers,
         )
