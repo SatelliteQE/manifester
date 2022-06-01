@@ -4,7 +4,6 @@ from dynaconf.utils.boxing import DynaBox
 from functools import cached_property
 from pathlib import Path
 
-import requests
 from logzero import logger
 
 from manifester.helpers import simple_retry
@@ -19,6 +18,11 @@ class Manifester:
             self.manifest_data = DynaBox(manifest_category)
         else:
             self.manifest_data = settings.manifest_category.get(manifest_category)
+        if kwargs.get("requester") is not None:
+            self.requester = kwargs["requester"]
+        else:
+            import requests
+            self.requester = requests
         self.allocation_name = allocation_name or "".join(
             random.sample(string.ascii_letters, 10)
         )
@@ -48,7 +52,7 @@ class Manifester:
             token_request_data = {"data": self.token_request_data}
             logger.debug("Generating access token")
             token_data = simple_retry(
-                requests.post,
+                self.requester.post,
                 cmd_args=[f"{self.token_request_url}"],
                 cmd_kwargs=token_request_data,
             ).json()
@@ -63,7 +67,7 @@ class Manifester:
         }
         valid_sat_versions = []
         sat_versions_response = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[
                     f"{self.allocations_url}/versions"
                 ],
@@ -84,7 +88,7 @@ class Manifester:
             },
         }
         self.allocation = simple_retry(
-            requests.post,
+            self.requester.post,
             cmd_args=[f"{self.allocations_url}"],
             cmd_kwargs=allocation_data,
         ).json()
@@ -101,7 +105,7 @@ class Manifester:
         self.allocation_uuid = self.allocation["body"]["uuid"]
         if self.simple_content_access == "disabled":
             simple_retry(
-                requests.put,
+                self.requester.put,
                 cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
                 cmd_kwargs={
                     "headers": {"Authorization": f"Bearer {self.access_token}"},
@@ -139,7 +143,7 @@ class Manifester:
                 "params": {"offset": _offset},
             }
             self._subscription_pools = simple_retry(
-                requests.get,
+                self.requester.get,
                 cmd_args=[
                     f"{self.allocations_url}/{self.allocation_uuid}/pools"
                 ],
@@ -161,7 +165,7 @@ class Manifester:
                     "params": {"offset": _offset},
                 }
                 offset_pools = simple_retry(
-                    requests.get,
+                    self.requester.get,
                     cmd_args=[
                         f"{self.allocations_url}/{self.allocation_uuid}/pools"
                     ],
@@ -182,7 +186,7 @@ class Manifester:
             "params": {"pool": f"{pool_id}", "quantity": f"{entitlement_quantity}"},
         }
         add_entitlements = simple_retry(
-            requests.post,
+            self.requester.post,
             cmd_args=[
                 f"{self.allocations_url}/{self.allocation_uuid}/entitlements"
             ],
@@ -200,13 +204,14 @@ class Manifester:
             "params": {"include": "entitlements"},
         }
         self.entitlement_data = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
             cmd_kwargs=data,
         ).json()
         current_entitlement = [
             d
             for d in self.entitlement_data["body"]["entitlementsAttached"]["value"]
+CONFLICT (content): Merge conflict in manifester/manifester.py
             if d["subscriptionName"] == subscription_name
         ]
         if not current_entitlement:
@@ -313,7 +318,7 @@ class Manifester:
             f"Triggering manifest export job for subscription allocation {self.allocation_name}"
         )
         trigger_export_job = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[
                 f"{self.allocations_url}/{self.allocation_uuid}/export"
             ],
@@ -321,7 +326,7 @@ class Manifester:
         ).json()
         export_job_id = trigger_export_job["body"]["exportJobID"]
         export_job = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[
                 f"{self.allocations_url}/{self.allocation_uuid}/exportJob/{export_job_id}"
             ],
@@ -331,7 +336,7 @@ class Manifester:
         limit_exceeded = False
         while export_job.status_code != 200:
             export_job = simple_retry(
-                requests.get,
+                self.requester.get,
                 cmd_args=[
                     f"{self.allocations_url}/{self.allocation_uuid}/exportJob/{export_job_id}"
                 ],
@@ -354,7 +359,7 @@ class Manifester:
         export_job = export_job.json()
         export_href = export_job["body"]["href"]
         manifest = simple_retry(
-            requests.get,
+            self.requester.get,
             cmd_args=[f"{export_href}"],
             cmd_kwargs=data,
         )
