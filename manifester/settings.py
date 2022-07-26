@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from wsgiref import validate
 
 from dynaconf import Dynaconf
 from dynaconf import Validator
@@ -13,7 +14,6 @@ if "MANIFESTER_DIRECTORY" in os.environ:
         MANIFESTER_DIRECTORY = envar_location
 
 settings_path = MANIFESTER_DIRECTORY.joinpath("manifester_settings.yaml")
-
 validators = [
     Validator("offline_token", must_exist=True),
     Validator("simple_content_access", default="enabled"),
@@ -21,4 +21,7 @@ validators = [
 settings = Dynaconf(
     settings_file=str(settings_path.absolute()),
     ENVVAR_PREFIX_FOR_DYNACONF="MANIFESTER",
+    validators=validators,
 )
+
+settings.validators.validate()
