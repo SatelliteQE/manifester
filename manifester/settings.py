@@ -1,7 +1,6 @@
 import os
-from pathlib import Path
-from wsgiref import validate
 
+from pathlib import Path
 from dynaconf import Dynaconf
 from dynaconf import Validator
 
