@@ -13,7 +13,6 @@ from manifester.settings import settings
 class Manifester:
     def __init__(self, manifest_category, allocation_name=None, **kwargs):
         self.allocation_name = allocation_name or "".join(random.sample(string.ascii_letters, 10))
-        # self.manifest_name = kwargs.get("manifest_name")
         self.offline_token = kwargs.get("offline_token", settings.offline_token)
         manifest_data = settings.manifest_category.get(manifest_category)
         self.subscription_data = manifest_data.subscription_data
@@ -188,6 +187,7 @@ class Manifester:
 
     def trigger_manifest_export(self):
         headers = {"headers": {"Authorization": f"Bearer {self.access_token}"}}
+        limit_exceeded = False
         # Should this use the XDG Base Directory Specification?
         local_file = Path(f"manifests/{self.allocation_name}_manifest.zip")
         local_file.parent.mkdir(parents=True, exist_ok=True)
@@ -236,3 +236,12 @@ class Manifester:
         )
         local_file.write_bytes(manifest.content)
         return manifest
+
+    def get_manifest(self):
+        self.create_subscription_allocation()
+        for sub in self.subscription_data:
+            self.process_subscription_pools(
+                subscription_pools=self.subscription_pools,
+                subscription_data=sub,
+            )
+        return self.trigger_manifest_export()
