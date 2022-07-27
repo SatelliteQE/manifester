@@ -9,7 +9,7 @@ def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_time
     cmd_kwargs = cmd_kwargs if cmd_kwargs else {}
     # If additional debug information is needed, the following log entry can be modified to
     # include the data being passed by adding {cmd_kwargs=} to the f-string. Please do so
-    # with caution as some data (notably the offline token) should be treated as a secret. 
+    # with caution as some data (notably the offline token) should be treated as a secret.
     logger.debug(f"Sending request to endpoint {cmd_args}")
     response = cmd(*cmd_args, **cmd_kwargs)
     logger.debug(f"Response status code is {response.status_code}")
