@@ -235,7 +235,6 @@ class Manifester:
 
     def trigger_manifest_export(self):
         headers = {"headers": {"Authorization": f"Bearer {self.access_token}"}}
-        limit_exceeded = False
         # Should this use the XDG Base Directory Specification?
         local_file = Path(f"manifests/{self.allocation_name}_manifest.zip")
         local_file.parent.mkdir(parents=True, exist_ok=True)
@@ -258,6 +257,7 @@ class Manifester:
             cmd_kwargs=headers,
         )
         request_count = 1
+        limit_exceeded = False
         while export_job.status_code != 200:
             export_job = simple_retry(
                 requests.get,
