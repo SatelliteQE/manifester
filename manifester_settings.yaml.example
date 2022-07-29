@@ -1,6 +1,7 @@
 #rhsm-manifester settings
 log_level: "info"
 offline_token: ""
+proxies: {"https": ""}
 manifest_category:
   golden_ticket:
     # An offline token can be generated at https://access.redhat.com/management/api
