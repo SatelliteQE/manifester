@@ -17,7 +17,7 @@ class Manifester:
         )
         self.manifest_data = settings.manifest_category.get(manifest_category)
         self.offline_token = kwargs.get(
-            "offline_token", self.manifest_data.offline_token
+            "offline_token", self.manifest_data.get("offline_token", settings.offline_token)
         )
         self.subscription_data = self.manifest_data.subscription_data
         self.sat_version = kwargs.get("sat_version", self.manifest_data.sat_version)
@@ -212,7 +212,7 @@ class Manifester:
                         else:
                             logger.debug(
                                 f"Received response status {add_entitlements.status_code}."
-                                f"Trying to find another pool."
+                                "Trying to find another pool."
                             )
                             self._subscription_pools = None
                             subscription_data["quantity"] -= self.attached_quantity
@@ -234,7 +234,7 @@ class Manifester:
                     break
                 else:
                     raise Exception(
-                        f"Something went wrong while adding entitlements. Received response status "
+                        "Something went wrong while adding entitlements. Received response status "
                         f"{add_entitlements.status_code}."
                     )
 
