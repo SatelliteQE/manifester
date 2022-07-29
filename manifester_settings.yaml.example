@@ -18,6 +18,7 @@ manifest_category:
     url:
       token_request: "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
       allocations: "https://api.access.redhat.com/management/v1/allocations"
+    proxies: {"https": ""}
   robottelo_automation:
     offline_token: ""
     sat_version: "sat-6.10"
@@ -30,3 +31,4 @@ manifest_category:
     url:
       token_request: "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
       allocations: "https://api.access.redhat.com/management/v1/allocations"
+    proxies: {"https": ""}

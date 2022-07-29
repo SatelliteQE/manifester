@@ -48,6 +48,7 @@ class Manifester:
     def create_subscription_allocation(self):
         allocation_data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
+            "proxies": self.manifest_data.proxies,
             "params": {
                 "name": f"{self.allocation_name}",
                 "version": f"{self.sat_version}",
@@ -72,6 +73,7 @@ class Manifester:
             _offset = 0
             data = {
                 "headers": {"Authorization": f"Bearer {self.access_token}"},
+                "proxies": self.manifest_data.proxies,
                 "params": {"offset": _offset},
             }
             self._subscription_pools = simple_retry(
@@ -93,6 +95,7 @@ class Manifester:
                 )
                 data = {
                     "headers": {"Authorization": f"Bearer {self.access_token}"},
+                    "proxies": self.manifest_data.proxies,
                     "params": {"offset": _offset},
                 }
                 offset_pools = simple_retry(
@@ -113,6 +116,7 @@ class Manifester:
     def add_entitlements_to_allocation(self, pool_id, entitlement_quantity):
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
+            "proxies": self.manifest_data.proxies,
             "params": {"pool": f"{pool_id}", "quantity": f"{entitlement_quantity}"},
         }
         add_entitlements = simple_retry(
@@ -130,6 +134,7 @@ class Manifester:
         )
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
+            "proxies": self.manifest_data.proxies,
             "params": {"include": "entitlements"},
         }
         self.entitlement_data = simple_retry(
@@ -234,7 +239,10 @@ class Manifester:
                     )
 
     def trigger_manifest_export(self):
-        headers = {"headers": {"Authorization": f"Bearer {self.access_token}"}}
+        data = {
+            "headers": {"Authorization": f"Bearer {self.access_token}"},
+            "proxies": self.manifest_data.proxies,
+        }
         # Should this use the XDG Base Directory Specification?
         local_file = Path(f"manifests/{self.allocation_name}_manifest.zip")
         local_file.parent.mkdir(parents=True, exist_ok=True)
@@ -246,7 +254,7 @@ class Manifester:
             cmd_args=[
                 f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/export"
             ],
-            cmd_kwargs=headers,
+            cmd_kwargs=data,
         ).json()
         export_job_id = trigger_export_job["body"]["exportJobID"]
         export_job = simple_retry(
@@ -254,7 +262,7 @@ class Manifester:
             cmd_args=[
                 f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/exportJob/{export_job_id}"
             ],
-            cmd_kwargs=headers,
+            cmd_kwargs=data,
         )
         request_count = 1
         limit_exceeded = False
@@ -264,7 +272,7 @@ class Manifester:
                 cmd_args=[
                     f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/exportJob/{export_job_id}"
                 ],
-                cmd_kwargs=headers,
+                cmd_kwargs=data,
             )
             logger.debug(
                 f"Attempting to export manifest. Attempt number: {request_count}"
@@ -284,7 +292,7 @@ class Manifester:
         manifest = simple_retry(
             requests.get,
             cmd_args=[f"{export_href}"],
-            cmd_kwargs=headers,
+            cmd_kwargs=data,
         )
         logger.info(
             f"Writing manifest for subscription allocation {self.allocation_name} to location "
