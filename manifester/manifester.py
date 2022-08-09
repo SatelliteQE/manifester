@@ -67,6 +67,20 @@ class Manifester:
         )
         return self.allocation_uuid
 
+    def delete_subscription_allocation(self):
+        self._access_token = None
+        data = {
+            "headers": {"Authorization": f"Bearer {self.access_token}"},
+            "proxies": self.manifest_data.get("proxies", settings.proxies),
+            "params": {"force": "true"},
+        }
+        response = simple_retry(
+            requests.delete,
+            cmd_args=[f"{self.manifest_data.url.allocations}/{self.allocation_uuid}"],
+            cmd_kwargs=data,
+        )
+        return response
+
     @property
     def subscription_pools(self):
         if not self._subscription_pools:
