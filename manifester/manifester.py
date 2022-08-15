@@ -323,3 +323,13 @@ class Manifester:
                 subscription_data=sub,
             )
         return self.trigger_manifest_export()
+
+    def __enter__(self):
+        try:
+            return self.get_manifest()
+        except:
+            self.delete_subscription_allocation()
+            raise
+
+    def __exit__(self, *tb_args):
+        self.delete_subscription_allocation()
