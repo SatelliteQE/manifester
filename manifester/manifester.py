@@ -12,13 +12,14 @@ from manifester.settings import settings
 
 class Manifester:
     def __init__(self, manifest_category, allocation_name=None, **kwargs):
+        if isinstance(manifest_category, dict):
+            self.manifest_data = manifest_category
+        else:
+            self.manifest_data = settings.manifest_category.get(manifest_category)
         self.allocation_name = allocation_name or "".join(
             random.sample(string.ascii_letters, 10)
         )
-        self.manifest_data = settings.manifest_category.get(manifest_category)
-        self.offline_token = kwargs.get(
-            "offline_token", self.manifest_data.get("offline_token", settings.offline_token)
-        )
+        self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
         self.subscription_data = self.manifest_data.subscription_data
         self.sat_version = kwargs.get("sat_version", self.manifest_data.sat_version)
         self.token_request_data = {
