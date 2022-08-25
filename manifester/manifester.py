@@ -1,5 +1,6 @@
 import random
 import string
+from dynaconf.utils.boxing import DynaBox
 from pathlib import Path
 
 import requests
@@ -13,7 +14,7 @@ from manifester.settings import settings
 class Manifester:
     def __init__(self, manifest_category, allocation_name=None, **kwargs):
         if isinstance(manifest_category, dict):
-            self.manifest_data = manifest_category
+            self.manifest_data = DynaBox(manifest_category)
         else:
             self.manifest_data = settings.manifest_category.get(manifest_category)
         self.allocation_name = allocation_name or "".join(
@@ -30,6 +31,8 @@ class Manifester:
         self.simple_content_access = kwargs.get(
             "simple_content_access", self.manifest_data.simple_content_access
         )
+        self.token_request_url = self.manifest_data.get("url", {}).get("token_request", settings.url.token_request)
+        self.allocations_url = self.manifest_data.get("url", {}).get("allocations", settings.url.allocations)
         self._access_token = None
         self._subscription_pools = None
 
@@ -40,7 +43,7 @@ class Manifester:
             logger.debug("Generating access token")
             token_data = simple_retry(
                 requests.post,
-                cmd_args=[f"{self.manifest_data.url.token_request}"],
+                cmd_args=[f"{self.token_request_url}"],
                 cmd_kwargs=token_request_data,
             ).json()
             self._access_token = token_data["access_token"]
@@ -58,7 +61,7 @@ class Manifester:
         }
         self.allocation = simple_retry(
             requests.post,
-            cmd_args=[f"{self.manifest_data.url.allocations}"],
+            cmd_args=[f"{self.allocations_url}"],
             cmd_kwargs=allocation_data,
         ).json()
         self.allocation_uuid = self.allocation["body"]["uuid"]
@@ -77,7 +80,7 @@ class Manifester:
         }
         response = simple_retry(
             requests.delete,
-            cmd_args=[f"{self.manifest_data.url.allocations}/{self.allocation_uuid}"],
+            cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
             cmd_kwargs=data,
         )
         return response
@@ -94,7 +97,7 @@ class Manifester:
             self._subscription_pools = simple_retry(
                 requests.get,
                 cmd_args=[
-                    f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/pools"
+                    f"{self.allocations_url}/{self.allocation_uuid}/pools"
                 ],
                 cmd_kwargs=data,
             ).json()
@@ -116,7 +119,7 @@ class Manifester:
                 offset_pools = simple_retry(
                     requests.get,
                     cmd_args=[
-                        f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/pools"
+                        f"{self.allocations_url}/{self.allocation_uuid}/pools"
                     ],
                     cmd_kwargs=data,
                 ).json()
@@ -137,7 +140,7 @@ class Manifester:
         add_entitlements = simple_retry(
             requests.post,
             cmd_args=[
-                f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/entitlements"
+                f"{self.allocations_url}/{self.allocation_uuid}/entitlements"
             ],
             cmd_kwargs=data,
         )
@@ -154,7 +157,7 @@ class Manifester:
         }
         self.entitlement_data = simple_retry(
             requests.get,
-            cmd_args=[f"{self.manifest_data.url.allocation}/{self.allocation_uuid}"],
+            cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
             cmd_kwargs=data,
         ).json()
         current_entitlement = [
@@ -267,7 +270,7 @@ class Manifester:
         trigger_export_job = simple_retry(
             requests.get,
             cmd_args=[
-                f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/export"
+                f"{self.allocations_url}/{self.allocation_uuid}/export"
             ],
             cmd_kwargs=data,
         ).json()
@@ -275,7 +278,7 @@ class Manifester:
         export_job = simple_retry(
             requests.get,
             cmd_args=[
-                f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/exportJob/{export_job_id}"
+                f"{self.allocations_url}/{self.allocation_uuid}/exportJob/{export_job_id}"
             ],
             cmd_kwargs=data,
         )
@@ -285,7 +288,7 @@ class Manifester:
             export_job = simple_retry(
                 requests.get,
                 cmd_args=[
-                    f"{self.manifest_data.url.allocations}/{self.allocation_uuid}/exportJob/{export_job_id}"
+                    f"{self.allocations_url}/{self.allocation_uuid}/exportJob/{export_job_id}"
                 ],
                 cmd_kwargs=data,
             )
