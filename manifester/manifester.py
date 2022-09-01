@@ -197,7 +197,8 @@ class Manifester:
             f"The following pools are matches for this subscription: {matching}"
         )
         for match in matching:
-            if match["entitlementsAvailable"] > subscription_data["quantity"]:
+            if (match["entitlementsAvailable"] > subscription_data["quantity"] or
+                match["entitlementsAvailable"] == -1):
                 logger.debug(
                     f"Pool {match['id']} is a match for this subscription and has "
                     f"{match['entitlementsAvailable']} entitlements available."
