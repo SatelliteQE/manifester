@@ -317,6 +317,8 @@ class Manifester:
             f"{local_file}"
         )
         local_file.write_bytes(manifest.content)
+        manifest.path = local_file
+        manifest.filename = f"{self.allocation_name}_manifest.zip"
         return manifest
 
     def get_manifest(self):
