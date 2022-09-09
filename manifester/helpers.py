@@ -21,3 +21,11 @@ def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_time
         time.sleep(_cur_timeout)
         response = simple_retry(cmd, cmd_args, cmd_kwargs, max_timeout, new_wait)
     return response
+
+def process_sat_version(vers):
+    if len(vers) > 8:
+        vers = vers.split('.')
+        vers = vers[:-1]
+        vers[1] = str(int(vers[1]) - 1)
+        vers = ".".join(vers)
+    return vers

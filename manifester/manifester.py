@@ -7,6 +7,7 @@ import requests
 from logzero import logger
 
 from manifester.helpers import simple_retry
+from manifester.helpers import process_sat_version
 from manifester.logger import setup_logzero
 from manifester.settings import settings
 
@@ -22,7 +23,7 @@ class Manifester:
         )
         self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
         self.subscription_data = self.manifest_data.subscription_data
-        self.sat_version = kwargs.get("sat_version", self.manifest_data.sat_version)
+        self.sat_version = process_sat_version(kwargs.get("sat_version", self.manifest_data.sat_version))
         self.token_request_data = {
             "grant_type": "refresh_token",
             "client_id": "rhsm-api",
@@ -50,6 +51,7 @@ class Manifester:
         return self._access_token
 
     def create_subscription_allocation(self):
+        breakpoint()
         allocation_data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
             "proxies": self.manifest_data.get("proxies", settings.proxies),
@@ -64,6 +66,16 @@ class Manifester:
             cmd_args=[f"{self.allocations_url}"],
             cmd_kwargs=allocation_data,
         ).json()
+        logger.debug(
+            f"Received response {self.allocation} when attempting to create allocation."
+        )
+        if ("error" in self.allocation.keys() and 
+            "invalid version" in self.allocation['error'].values()):
+            raise ValueError(
+                                f"{self.sat_version} is not a valid version number."
+                                "Versions must be in the form of \"sat-X.Y\". Only released"
+                                "versions of Satellite are accepted."
+                            )
         self.allocation_uuid = self.allocation["body"]["uuid"]
         logger.info(
             f"Subscription allocation created with name {self.allocation_name} "
