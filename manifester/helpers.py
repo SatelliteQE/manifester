@@ -22,10 +22,13 @@ def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_time
         response = simple_retry(cmd, cmd_args, cmd_kwargs, max_timeout, new_wait)
     return response
 
-def process_sat_version(vers):
-    if len(vers) > 8:
-        vers = vers.split('.')
-        vers = vers[:-1]
-        vers[1] = str(int(vers[1]) - 1)
-        vers = ".".join(vers)
-    return vers
+def process_sat_version(sat_version, valid_sat_versions):
+    if len(sat_version) > 8:
+        sat_version = sat_version.split('.')
+        sat_version = sat_version[:-1]
+        sat_version = ".".join(sat_version)
+    if sat_version not in valid_sat_versions:
+        sat_version = sat_version.split('.')
+        sat_version[1] = str(int(sat_version[1]) - 1)
+        sat_version = ".".join(sat_version)
+    return sat_version

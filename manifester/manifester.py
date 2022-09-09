@@ -23,7 +23,6 @@ class Manifester:
         )
         self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
         self.subscription_data = self.manifest_data.subscription_data
-        self.sat_version = process_sat_version(kwargs.get("sat_version", self.manifest_data.sat_version))
         self.token_request_data = {
             "grant_type": "refresh_token",
             "client_id": "rhsm-api",
@@ -36,6 +35,10 @@ class Manifester:
         self.allocations_url = self.manifest_data.get("url", {}).get("allocations", settings.url.allocations)
         self._access_token = None
         self._subscription_pools = None
+        self.sat_version = process_sat_version(
+            kwargs.get("sat_version", self.manifest_data.sat_version),
+            self.valid_sat_versions,
+        )
 
     @property
     def access_token(self):
@@ -49,9 +52,26 @@ class Manifester:
             ).json()
             self._access_token = token_data["access_token"]
         return self._access_token
+    
+    @property
+    def valid_sat_versions(self):
+        headers = {
+            "headers": {"Authorization": f"Bearer {self.access_token}"},
+            "proxies": self.manifest_data.get("proxies", settings.proxies),
+        }
+        valid_sat_versions = []
+        sat_versions_response = simple_retry(
+            requests.get,
+            cmd_args=[
+                    f"{self.allocations_url}/versions"
+                ],
+            cmd_kwargs=headers,
+            ).json()
+        for dict in sat_versions_response["body"]:
+            valid_sat_versions.append(dict["value"])
+        return valid_sat_versions
 
     def create_subscription_allocation(self):
-        breakpoint()
         allocation_data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
             "proxies": self.manifest_data.get("proxies", settings.proxies),
