@@ -1,6 +1,7 @@
 import random
 import string
 from dynaconf.utils.boxing import DynaBox
+from functools import cached_property
 from pathlib import Path
 
 import requests
@@ -53,7 +54,7 @@ class Manifester:
             self._access_token = token_data["access_token"]
         return self._access_token
     
-    @property
+    @cached_property
     def valid_sat_versions(self):
         headers = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
@@ -67,8 +68,8 @@ class Manifester:
                 ],
             cmd_kwargs=headers,
             ).json()
-        for dict in sat_versions_response["body"]:
-            valid_sat_versions.append(dict["value"])
+        for ver_dict in sat_versions_response["body"]:
+            valid_sat_versions.append(ver_dict["value"])
         return valid_sat_versions
 
     def create_subscription_allocation(self):
@@ -93,8 +94,8 @@ class Manifester:
             "invalid version" in self.allocation['error'].values()):
             raise ValueError(
                                 f"{self.sat_version} is not a valid version number."
-                                "Versions must be in the form of \"sat-X.Y\". Only released"
-                                "versions of Satellite are accepted."
+                                "Versions must be in the form of \"sat-X.Y\". Current"
+                                f"valid versions are {self.valid_sat_versions}."
                             )
         self.allocation_uuid = self.allocation["body"]["uuid"]
         logger.info(
