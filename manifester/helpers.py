@@ -23,18 +23,27 @@ def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_time
     return response
 
 def process_sat_version(sat_version, valid_sat_versions):
-    """Ensure that the sat_version parameteris properly formatted for the RHSM API"""
-    # The valid values for this parameter from the API's perspective are all 8 characters or less,
-    # e.g. sat-6.11. Some data sources may include a z-stream version (e.g. sat-6.11.0). The 
-    # conditional below assumes that, if the length of sat_version is greated than 8 characters,
-    # it includes a z-stream version that should be removed.
-    if len(sat_version) > 8:
-        sat_version = sat_version.split('.')
-        sat_version = sat_version[:-1]
-        sat_version = ".".join(sat_version)
+    """Ensure that the sat_version parameter is properly formatted for the RHSM API when creating
+       a subscription allocation with the 'POST allocations' endpoint"""
     if sat_version not in valid_sat_versions:
-        sat_version = sat_version.split('.')
-        sat_version[1] = str(int(sat_version[1]) - 1)
-        sat_version = ".".join(sat_version)
+        # The valid values for the sat_version parameter when creating a subscription allocation
+        # are all 8 characters or less (e.g. 'sat-6.11'). Some data sources may include a Z-stream
+        # version (e.g. 'sat-6.11.0') when retrieving this value from settings. The conditional
+        # below assumes that, if the length of sat_version is greated than 8 characters, it includes
+        # a Z-stream version that should be removed.
+        if len(sat_version) > 8:
+            sat_version = sat_version.split('.')
+            sat_version = sat_version[:-1]
+            sat_version = ".".join(sat_version)
+        # The conditional below assumes that an invalid sat_version with the Z-stream version removed
+        # is a Y-stream version in development. New Y-stream versions are not available as valid 
+        # sat_version values for the 'POST allocations' endpoint until the corresponding Satellite
+        # versions are generally available. As of Satellite 6.12, decrementing the Y-stream version
+        # by 1 works around this constraint, but the conditional below may need to be modified to
+        # accommodate additional use cases or versioning scheme changes. 
+        if sat_version not in valid_sat_versions:
+            sat_version = sat_version.split('.')
+            sat_version[1] = str(int(sat_version[1]) - 1)
+            sat_version = ".".join(sat_version)
     assert sat_version in valid_sat_versions
     return sat_version
