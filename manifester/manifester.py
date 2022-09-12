@@ -1,12 +1,14 @@
 import random
 import string
 from dynaconf.utils.boxing import DynaBox
+from functools import cached_property
 from pathlib import Path
 
 import requests
 from logzero import logger
 
 from manifester.helpers import simple_retry
+from manifester.helpers import process_sat_version
 from manifester.logger import setup_logzero
 from manifester.settings import settings
 
@@ -22,7 +24,6 @@ class Manifester:
         )
         self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
         self.subscription_data = self.manifest_data.subscription_data
-        self.sat_version = kwargs.get("sat_version", self.manifest_data.sat_version)
         self.token_request_data = {
             "grant_type": "refresh_token",
             "client_id": "rhsm-api",
@@ -35,6 +36,10 @@ class Manifester:
         self.allocations_url = self.manifest_data.get("url", {}).get("allocations", settings.url.allocations)
         self._access_token = None
         self._subscription_pools = None
+        self.sat_version = process_sat_version(
+            kwargs.get("sat_version", self.manifest_data.sat_version),
+            self.valid_sat_versions,
+        )
 
     @property
     def access_token(self):
@@ -48,6 +53,24 @@ class Manifester:
             ).json()
             self._access_token = token_data["access_token"]
         return self._access_token
+    
+    @cached_property
+    def valid_sat_versions(self):
+        headers = {
+            "headers": {"Authorization": f"Bearer {self.access_token}"},
+            "proxies": self.manifest_data.get("proxies", settings.proxies),
+        }
+        valid_sat_versions = []
+        sat_versions_response = simple_retry(
+            requests.get,
+            cmd_args=[
+                    f"{self.allocations_url}/versions"
+                ],
+            cmd_kwargs=headers,
+            ).json()
+        for ver_dict in sat_versions_response["body"]:
+            valid_sat_versions.append(ver_dict["value"])
+        return valid_sat_versions
 
     def create_subscription_allocation(self):
         allocation_data = {
@@ -64,6 +87,16 @@ class Manifester:
             cmd_args=[f"{self.allocations_url}"],
             cmd_kwargs=allocation_data,
         ).json()
+        logger.debug(
+            f"Received response {self.allocation} when attempting to create allocation."
+        )
+        if ("error" in self.allocation.keys() and 
+            "invalid version" in self.allocation['error'].values()):
+            raise ValueError(
+                                f"{self.sat_version} is not a valid version number."
+                                "Versions must be in the form of \"sat-X.Y\". Current"
+                                f"valid versions are {self.valid_sat_versions}."
+                            )
         self.allocation_uuid = self.allocation["body"]["uuid"]
         logger.info(
             f"Subscription allocation created with name {self.allocation_name} "
