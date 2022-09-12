@@ -40,10 +40,10 @@ def process_sat_version(sat_version, valid_sat_versions):
         # sat_version values for the 'POST allocations' endpoint until the corresponding Satellite
         # versions are generally available. As of Satellite 6.12, decrementing the Y-stream version
         # by 1 works around this constraint, but the conditional below may need to be modified to
-        # accommodate additional use cases or versioning scheme changes. 
+        # accommodate versioning scheme changes or additional use cases. 
         if sat_version not in valid_sat_versions:
             sat_version = sat_version.split('.')
             sat_version[1] = str(int(sat_version[1]) - 1)
             sat_version = ".".join(sat_version)
-    assert sat_version in valid_sat_versions
+        assert sat_version in valid_sat_versions
     return sat_version
