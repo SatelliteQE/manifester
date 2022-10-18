@@ -98,6 +98,16 @@ class Manifester:
                                 f"valid versions are {self.valid_sat_versions}."
                             )
         self.allocation_uuid = self.allocation["body"]["uuid"]
+        if self.simple_content_access == "disabled":
+            simple_retry(
+                requests.put,
+                cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
+                cmd_kwargs={
+                    "headers": {"Authorization": f"Bearer {self.access_token}"},
+                    "proxies": self.manifest_data.get("proxies", settings.proxies),
+                    "json": {"simpleContentAccess": "disabled"},
+                },
+            )
         logger.info(
             f"Subscription allocation created with name {self.allocation_name} "
             f"and UUID {self.allocation_uuid}"
