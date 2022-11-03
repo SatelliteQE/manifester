@@ -22,7 +22,7 @@ class Manifester:
         self.allocation_name = allocation_name or "".join(
             random.sample(string.ascii_letters, 10)
         )
-        self.manifest_name = f'{self.allocation_name}_manifest.zip'
+        self.manifest_name = Path(f'{self.allocation_name}_manifest.zip')
         self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
         self.subscription_data = self.manifest_data.subscription_data
         self.token_request_data = {
