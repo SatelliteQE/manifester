@@ -22,6 +22,7 @@ class Manifester:
         self.allocation_name = allocation_name or "".join(
             random.sample(string.ascii_letters, 10)
         )
+        self.manifest_name = Path(f'{self.allocation_name}_manifest.zip')
         self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
         self.subscription_data = self.manifest_data.subscription_data
         self.token_request_data = {
@@ -306,7 +307,7 @@ class Manifester:
             "proxies": self.manifest_data.get("proxies", settings.proxies),
         }
         # Should this use the XDG Base Directory Specification?
-        local_file = Path(f"manifests/{self.allocation_name}_manifest.zip")
+        local_file = Path(f"manifests/{self.manifest_name}")
         local_file.parent.mkdir(parents=True, exist_ok=True)
         logger.info(
             f"Triggering manifest export job for subscription allocation {self.allocation_name}"
@@ -362,6 +363,7 @@ class Manifester:
         )
         local_file.write_bytes(manifest.content)
         manifest.path = local_file
+        manifest.name = self.manifest_name
         return manifest
 
     def get_manifest(self):
