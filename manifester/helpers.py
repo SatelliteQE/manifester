@@ -33,7 +33,7 @@ def process_sat_version(sat_version, valid_sat_versions):
         # a Z-stream version that should be removed.
         if len(sat_version) > 8:
             sat_version = sat_version.split('.')
-            sat_version = sat_version[:-1]
+            sat_version = sat_version[0:2]
             sat_version = ".".join(sat_version)
         # The conditional below assumes that an invalid sat_version with the Z-stream version removed
         # is a Y-stream version in development. New Y-stream versions are not available as valid 
