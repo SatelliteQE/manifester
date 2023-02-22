@@ -35,15 +35,7 @@ def process_sat_version(sat_version, valid_sat_versions):
             sat_version = sat_version.split('.')
             sat_version = sat_version[0:2]
             sat_version = ".".join(sat_version)
-        # The conditional below assumes that an invalid sat_version with the Z-stream version removed
-        # is a Y-stream version in development. New Y-stream versions are not available as valid 
-        # sat_version values for the 'POST allocations' endpoint until the corresponding Satellite
-        # versions are generally available. As of Satellite 6.12, decrementing the Y-stream version
-        # by 1 works around this constraint, but the conditional below may need to be modified to
-        # accommodate versioning scheme changes or additional use cases. 
+        # If sat_version is still not valid, default to the latest valid version.
         if sat_version not in valid_sat_versions:
-            sat_version = sat_version.split('.')
-            sat_version[1] = str(int(sat_version[1]) - 1)
-            sat_version = ".".join(sat_version)
-        assert sat_version in valid_sat_versions
-    return sat_version
+            valid_sat_versions.sort(key = lambda i: int(i.split('-')[-1].split('.')[-1]), reverse = True)
+    return valid_sat_versions[0]
