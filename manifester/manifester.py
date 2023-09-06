@@ -349,7 +349,8 @@ class Manifester:
                 break
             request_count += 1
         if limit_exceeded:
-            return
+            self.content = None
+            return self
         export_job = export_job.json()
         export_href = export_job["body"]["href"]
         manifest = simple_retry(
