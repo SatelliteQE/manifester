@@ -14,7 +14,6 @@ def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_time
     # with caution as some data (notably the offline token) should be treated as a secret.
     logger.debug(f"Sending request to endpoint {cmd_args}")
     response = cmd(*cmd_args, **cmd_kwargs)
-    breakpoint()
     logger.debug(f"Response status code is {response.status_code}")
     if response.status_code in [429, 500, 504]:
         new_wait = _cur_timeout * 2

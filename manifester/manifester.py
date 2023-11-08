@@ -211,7 +211,6 @@ class Manifester:
         current_entitlement = [
             d
             for d in self.entitlement_data["body"]["entitlementsAttached"]["value"]
-CONFLICT (content): Merge conflict in manifester/manifester.py
             if d["subscriptionName"] == subscription_name
         ]
         if not current_entitlement:
