@@ -40,7 +40,8 @@ def process_sat_version(sat_version, valid_sat_versions):
         # If sat_version is still not valid, default to the latest valid version.
         if sat_version not in valid_sat_versions:
             valid_sat_versions.sort(key = lambda i: int(i.split('-')[-1].split('.')[-1]), reverse = True)
-    return valid_sat_versions[0]
+            return valid_sat_versions[0]
+    return sat_version
 
 def fake_http_response_code(good_codes=None, bad_codes=None, fail_rate=20):
     # randomish = random.random()

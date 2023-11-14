@@ -20,9 +20,11 @@ class Manifester:
             self.manifest_data = settings.manifest_category.get(manifest_category)
         if kwargs.get("requester") is not None:
             self.requester = kwargs["requester"]
+            self.is_mock = True
         else:
             import requests
             self.requester = requests
+            self.is_mock = False
         self.allocation_name = allocation_name or "".join(
             random.sample(string.ascii_letters, 10)
         )
@@ -73,8 +75,11 @@ class Manifester:
                 ],
             cmd_kwargs=headers,
             ).json()
-        for ver_dict in sat_versions_response["body"]:
-            valid_sat_versions.append(ver_dict["value"])
+        if self.is_mock is False:
+            for ver_dict in sat_versions_response["body"]:
+                valid_sat_versions.append(ver_dict["value"])
+        else:
+            valid_sat_versions = sat_versions_response["valid_sat_versions"]
         return valid_sat_versions
 
     def create_subscription_allocation(self):
