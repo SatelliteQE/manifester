@@ -7,6 +7,7 @@ from logzero import logger
 
 def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_timeout=1):
     """Re(Try) a function given its args and kwargs up until a max timeout"""
+
     cmd_args = cmd_args if cmd_args else []
     cmd_kwargs = cmd_kwargs if cmd_kwargs else {}
     # If additional debug information is needed, the following log entry can be modified to
@@ -44,8 +45,8 @@ def process_sat_version(sat_version, valid_sat_versions):
     return sat_version
 
 def fake_http_response_code(good_codes=None, bad_codes=None, fail_rate=20):
-    # randomish = random.random()
-    # print(randomish, fail_rate/100)
+    """Return an HTTP response code randomly selected from sets of good and bad codes"""
+
     if random.random() > (fail_rate / 100):
         return random.choice(good_codes)
     else:

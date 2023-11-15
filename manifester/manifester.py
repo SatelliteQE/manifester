@@ -132,7 +132,7 @@ class Manifester:
             "params": {"force": "true"},
         }
         response = simple_retry(
-            requests.delete,
+            self.requester.delete,
             cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
             cmd_kwargs=data,
         )
@@ -260,7 +260,7 @@ class Manifester:
                     pool_id=match["id"],
                     entitlement_quantity=subscription_data["quantity"],
                 )
-                # if the above is using simple_rety, it will raise an exception
+                # if the above is using simple_retry, it will raise an exception
                 # and never trigger the following block
                 if add_entitlements.status_code in [404, 429, 500, 504]:
                     verify_entitlements = self.verify_allocation_entitlements(
