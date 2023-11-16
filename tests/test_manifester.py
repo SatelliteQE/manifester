@@ -28,7 +28,7 @@ class RhsmApiStub(MockStub):
 
         if args[1].endswith("openid-connect/token"):
             return RhsmApiStub(in_dict={"access_token": "this is a simulated access token"})
-        if args[1].endswith("allocations/"):
+        if args[1].endswith("allocations"):
             return RhsmApiStub(in_dict={"uuid": "1234567890"})
         if args[1].endswith("entitlements"):
             return RhsmApiStub(in_dict={"params": kwargs["params"]}, status_code=200)
@@ -51,6 +51,12 @@ class RhsmApiStub(MockStub):
         if "export" in args[1] and not args[1].endswith("export"):
             return RhsmApiStub(in_dict={"content": b"this is a simulated manifest"})
 
+    def delete(*args, **kwargs):
+        """Simulate responses to DELETE requests for RHSM API endpoints used by Manifester"""
+
+        if args[1].endswith("allocations/1234567890") and kwargs["params"]["force"] == "true":
+            return RhsmApiStub(in_dict={"content": b""}, good_codes=[204])
+
 
 def test_create_allocation():
     """Test that manifester's create_subscription_allocation method returns a UUID"""
@@ -67,4 +73,14 @@ def test_get_manifest():
 
     manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
     manifest = manifester.get_manifest()
-    assert manifest["content"].decode("utf-8") == "this is a simulated manifest"
+    assert manifest.content.decode("utf-8") == "this is a simulated manifest"
+    assert manifest.status_code == 200
+
+def test_delete_subscription_allocation():
+    """Test that manifester's delete_subscription_allocation method deletes a subscription allocation"""
+
+    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
+    manifester.get_manifest()
+    response = manifester.delete_subscription_allocation()
+    assert response.status_code == 204
+    assert response.content == b""
