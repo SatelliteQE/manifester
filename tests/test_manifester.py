@@ -20,41 +20,46 @@ class RhsmApiStub(MockStub):
         self._good_codes = kwargs.get("good_codes", [200])
         self._bad_codes = kwargs.get("bad_codes", [429, 500, 504])
         self._fail_rate = kwargs.get("fail_rate", 10)
-        self.status_code = kwargs.get("status_code") or fake_http_response_code(self._good_codes, self._bad_codes, self._fail_rate)
+        # self.status_code = kwargs.get("status_code") or fake_http_response_code(self._good_codes, self._bad_codes, self._fail_rate)
         super().__init__(in_dict)
 
-    def post(*args, **kwargs):
+    @property
+    def status_code(self):
+        return fake_http_response_code(self._good_codes, self._bad_codes, self._fail_rate)
+
+    def post(self, *args, **kwargs):
         """Simulate responses to POST requests for RHSM API endpoints used by Manifester"""
 
-        if args[1].endswith("openid-connect/token"):
+        if args[0].endswith("openid-connect/token"):
             return RhsmApiStub(in_dict={"access_token": "this is a simulated access token"})
-        if args[1].endswith("allocations"):
+        if args[0].endswith("allocations"):
             return RhsmApiStub(in_dict={"uuid": "1234567890"})
-        if args[1].endswith("entitlements"):
+        if args[0].endswith("entitlements"):
             return RhsmApiStub(in_dict={"params": kwargs["params"]}, status_code=200)
 
-    def get(*args, **kwargs):
+    def get(self, *args, **kwargs):
         """"Simulate responses to GET requests for RHSM API endpoints used by Manifester"""
 
-        if args[1].endswith("versions"):
+        if args[0].endswith("versions"):
             return RhsmApiStub(in_dict={"valid_sat_versions": ["sat-6.12", "sat-6.13", "sat-6.14"]})
-        if args[1].endswith("pools"):
+        if args[0].endswith("pools"):
             # question: how to fake > 50 pools to test use of offset parameter?
             return RhsmApiStub(in_dict={'body': [{'id': '987adf2a8977', 'subscriptionName': 'Red Hat Satellite Infrastructure Subscription', 'entitlementsAvailable': 13}]})
-        if "allocations" in args[1] and not ("export" in args[1] or "pools" in args[1]):
+        if "allocations" in args[0] and not ("export" in args[0] or "pools" in args[0]):
             return RhsmApiStub(in_dict={"allocation_data": "this allocation data also includes entitlement data"})
-        if args[1].endswith("export"):
+        if args[0].endswith("export"):
             return RhsmApiStub(in_dict={'body': {'exportJobID': '123456', 'href': 'exportJob'}})
-        if "exportJob" in args[1]:
+        if "exportJob" in args[0]:
             responses = [202, 200]
             return RhsmApiStub(in_dict={'body': {'exportID': 27, 'href': 'https://example.com/export/98ef892ac11'}}, status_code=random.choice(responses))
-        if "export" in args[1] and not args[1].endswith("export"):
+        if "export" in args[0] and not args[0].endswith("export"):
+            # Manifester expets a bytes-type object to be returned as the manifest
             return RhsmApiStub(in_dict={"content": b"this is a simulated manifest"})
 
-    def delete(*args, **kwargs):
+    def delete(self, *args, **kwargs):
         """Simulate responses to DELETE requests for RHSM API endpoints used by Manifester"""
 
-        if args[1].endswith("allocations/1234567890") and kwargs["params"]["force"] == "true":
+        if args[0].endswith("allocations/1234567890") and kwargs["params"]["force"] == "true":
             return RhsmApiStub(in_dict={"content": b""}, good_codes=[204])
 
 
@@ -65,8 +70,13 @@ def test_create_allocation():
     allocation_uuid = manifester.create_subscription_allocation()
     assert allocation_uuid == "1234567890"
 
-def test_negative_export_limit_exceeded():
-    """Test that exceeding the limit when checking an export job's status results in an exception"""
+def test_negative_simple_retry_timeout():
+    """Test that exceeding the attempt limit when retrying a failed API call results in an exception"""
+
+    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, fail_rate=100))
+    with pytest.raises(Exception) as exception:
+        manifester.get_manifest()
+    assert str(exception.value) == "Timeout exceeded"
 
 def test_get_manifest():
     """Test that manifester's get_manifest method returns a manifest"""
