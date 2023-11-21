@@ -21,7 +21,6 @@ class RhsmApiStub(MockStub):
         self._good_codes = kwargs.get("good_codes", [200])
         self._bad_codes = kwargs.get("bad_codes", [429, 500, 504])
         self._fail_rate = kwargs.get("fail_rate", 10)
-        # self.status_code = kwargs.get("status_code") or fake_http_response_code(self._good_codes, self._bad_codes, self._fail_rate)
         super().__init__(in_dict)
 
     @cached_property
@@ -40,12 +39,6 @@ class RhsmApiStub(MockStub):
         if args[0].endswith("entitlements"):
             self.params = kwargs["params"]
             return self
-        # if args[0].endswith("openid-connect/token"):
-        #     return RhsmApiStub(in_dict={"access_token": "this is a simulated access token"})
-        # if args[0].endswith("allocations"):
-        #     return RhsmApiStub(in_dict={"uuid": "1234567890"})
-        # if args[0].endswith("entitlements"):
-        #     return RhsmApiStub(in_dict={"params": kwargs["params"]}, status_code=200)
 
     def get(self, *args, **kwargs):
         """"Simulate responses to GET requests for RHSM API endpoints used by Manifester"""
@@ -73,24 +66,9 @@ class RhsmApiStub(MockStub):
         if "export" in args[0] and not args[0].endswith("export"):
             del self.status_code
             self._good_codes = [200]
-            # Manifester expets a bytes-type object to be returned as the manifest
+            # Manifester expects a bytes-type object to be returned as the manifest
             self.content = b"this is a simulated manifest"
             return self
-        # if args[0].endswith("versions"):
-        #     return RhsmApiStub(in_dict={"valid_sat_versions": ["sat-6.12", "sat-6.13", "sat-6.14"]})
-        # if args[0].endswith("pools"):
-        #     # question: how to fake > 50 pools to test use of offset parameter?
-        #     return RhsmApiStub(in_dict={'body': [{'id': '987adf2a8977', 'subscriptionName': 'Red Hat Satellite Infrastructure Subscription', 'entitlementsAvailable': 13}]})
-        # if "allocations" in args[0] and not ("export" in args[0] or "pools" in args[0]):
-        #     return RhsmApiStub(in_dict={"allocation_data": "this allocation data also includes entitlement data"})
-        # if args[0].endswith("export"):
-        #     return RhsmApiStub(in_dict={'body': {'exportJobID': '123456', 'href': 'exportJob'}})
-        # if "exportJob" in args[0]:
-        #     responses = [202, 200]
-        #     return RhsmApiStub(in_dict={'body': {'exportID': 27, 'href': 'https://example.com/export/98ef892ac11'}}, status_code=random.choice(responses))
-        # if "export" in args[0] and not args[0].endswith("export"):
-        #     # Manifester expets a bytes-type object to be returned as the manifest
-        #     return RhsmApiStub(in_dict={"content": b"this is a simulated manifest"})
 
     def delete(self, *args, **kwargs):
         """Simulate responses to DELETE requests for RHSM API endpoints used by Manifester"""
@@ -100,8 +78,6 @@ class RhsmApiStub(MockStub):
             self.content = b""
             self._good_codes=[204]
             return self
-        # if args[0].endswith("allocations/1234567890") and kwargs["params"]["force"] == "true":
-        #     return RhsmApiStub(in_dict={"content": b""}, good_codes=[204])
 
 
 def test_create_allocation():
