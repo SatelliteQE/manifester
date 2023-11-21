@@ -5,7 +5,7 @@ from collections import UserDict
 from logzero import logger
 
 
-def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=2, _cur_timeout=1):
+def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_timeout=1):
     """Re(Try) a function given its args and kwargs up until a max timeout"""
 
     cmd_args = cmd_args if cmd_args else []
