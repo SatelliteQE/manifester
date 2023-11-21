@@ -78,8 +78,9 @@ class Manifester:
                 ],
             cmd_kwargs=headers,
             ).json()
+        breakpoint()
         if self.is_mock:
-            valid_sat_versions = sat_versions_response.valid_sat_versions
+            sat_versions_response = sat_versions_response.version_response
         for ver_dict in sat_versions_response["body"]:
             valid_sat_versions.append(ver_dict["value"])
         return valid_sat_versions

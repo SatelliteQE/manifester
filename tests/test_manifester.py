@@ -44,7 +44,11 @@ class RhsmApiStub(MockStub):
         """"Simulate responses to GET requests for RHSM API endpoints used by Manifester"""
 
         if args[0].endswith("versions"):
-            self.valid_sat_versions = ["sat-6.12", "sat-6.13", "sat-6.14"]
+            self.version_response = {'body': [
+                {'value': 'sat-6.14', 'description': 'Satellite 6.14'},
+                {'value': 'sat-6.13', 'description': 'Satellite 6.13'},
+                {'value': 'sat-6.12', 'description': 'Satellite 6.12'}
+            ]}
             return self
         if args[0].endswith("pools"):
             self.body = [{'id': '987adf2a8977', 'subscriptionName': 'Red Hat Satellite Infrastructure Subscription', 'entitlementsAvailable': 13}]
