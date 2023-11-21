@@ -78,11 +78,10 @@ class Manifester:
                 ],
             cmd_kwargs=headers,
             ).json()
-        if self.is_mock is False:
-            for ver_dict in sat_versions_response["body"]:
-                valid_sat_versions.append(ver_dict["value"])
-        else:
-            valid_sat_versions = sat_versions_response["valid_sat_versions"]
+        if self.is_mock:
+            valid_sat_versions = sat_versions_response.valid_sat_versions
+        for ver_dict in sat_versions_response["body"]:
+            valid_sat_versions.append(ver_dict["value"])
         return valid_sat_versions
 
     def create_subscription_allocation(self):
