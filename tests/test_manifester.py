@@ -94,18 +94,17 @@ def test_create_allocation():
 def test_negative_simple_retry_timeout():
     """Test that exceeding the attempt limit when retrying a failed API call results in an exception"""
 
-    # TODO: figure out why this test fails despite raising the expected exception
-    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, fail_rate=100))
+    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, fail_rate=0))
+    manifester.requester._fail_rate = 100
     with pytest.raises(Exception) as exception:
-        manifester.create_subscription_allocation()
+        manifester.get_manifest()
     assert str(exception.value) == "Retry timeout exceeded"
 
 def test_negative_manifest_export_timeout():
     """Test that exceeding the attempt limit when exporting a manifest results in an exception"""
 
-    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict={"force_export_failure": True}))
     with pytest.raises(Exception) as exception:
-        manifester.get_manifest()
+        manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict={"force_export_failure": True}))
     assert str(exception.value) == "Export timeout exceeded"
 
 def test_get_manifest():
@@ -124,3 +123,6 @@ def test_delete_subscription_allocation():
     response = manifester.delete_subscription_allocation()
     assert response.status_code == 204
     assert response.content == b""
+
+def test_ingest_manifest_data_via_dict():
+    """Test that manifester is able to """
