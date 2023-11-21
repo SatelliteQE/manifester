@@ -58,7 +58,10 @@ class Manifester:
                 cmd_args=[f"{self.token_request_url}"],
                 cmd_kwargs=token_request_data,
             ).json()
-            self._access_token = token_data["access_token"]
+            if self.is_mock:
+                self._access_token = token_data.access_token
+            else:
+                self._access_token = token_data["access_token"]
         return self._access_token
     
     @cached_property
@@ -131,6 +134,8 @@ class Manifester:
             "proxies": self.manifest_data.get("proxies", settings.proxies),
             "params": {"force": "true"},
         }
+        if self.is_mock:
+            self.allocation_uuid = self.allocation_uuid.uuid
         response = simple_retry(
             self.requester.delete,
             cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
@@ -241,11 +246,14 @@ class Manifester:
 
     def process_subscription_pools(self, subscription_pools, subscription_data):
         logger.debug(f"Finding a matching pool for {subscription_data['name']}.")
-        matching = [
-            d
-            for d in subscription_pools["body"]
-            if d["subscriptionName"] == subscription_data["name"]
-        ]
+        if self.is_mock:
+            matching = [d for d in subscription_pools.body if d["subscriptionName"] == subscription_data["name"]]
+        else:
+            matching = [
+                d
+                for d in subscription_pools["body"]
+                if d["subscriptionName"] == subscription_data["name"]
+            ]
         logger.debug(
             f"The following pools are matches for this subscription: {matching}"
         )
@@ -355,13 +363,17 @@ class Manifester:
                     "Manifest export job status check limit exceeded. This may indicate an "
                     "upstream issue with Red Hat Subscription Management."
                 )
+                raise Exception("Export timeout exceeded")
                 break
             request_count += 1
         if limit_exceeded:
             self.content = None
             return self
         export_job = export_job.json()
-        export_href = export_job["body"]["href"]
+        if self.is_mock:
+            export_href = export_job.body["href"]
+        else:
+            export_href = export_job["body"]["href"]
         manifest = simple_retry(
             self.requester.get,
             cmd_args=[f"{export_href}"],

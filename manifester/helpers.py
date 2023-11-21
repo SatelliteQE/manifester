@@ -5,7 +5,7 @@ from collections import UserDict
 from logzero import logger
 
 
-def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_timeout=1):
+def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=2, _cur_timeout=1):
     """Re(Try) a function given its args and kwargs up until a max timeout"""
 
     cmd_args = cmd_args if cmd_args else []
@@ -19,7 +19,7 @@ def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_time
     if response.status_code in [429, 500, 504]:
         new_wait = _cur_timeout * 2
         if new_wait > max_timeout:
-            raise Exception("Timeout exceeded")
+            raise Exception("Retry timeout exceeded")
         logger.debug(f"Trying again in {_cur_timeout} seconds")
         time.sleep(_cur_timeout)
         response = simple_retry(cmd, cmd_args, cmd_kwargs, max_timeout, new_wait)
