@@ -125,4 +125,33 @@ def test_delete_subscription_allocation():
     assert response.content == b""
 
 def test_ingest_manifest_data_via_dict():
-    """Test that manifester is able to """
+    """Test that manifester is able to read configuration data from a dictionary"""
+
+    manifest_data = {
+        "log_level": "debug",
+        "offline_token": "test",
+        "proxies": {"https:" ""},
+        "url": {
+            "token_request": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token",
+            "allocations": "https://api.access.redhat.com/management/v1/allocations",
+        },
+        "sat_version": "sat-6.14",
+        "subscription_data": [
+            {
+                "name": "Red Hat Enterprise Linux Server, Premium (Physical or Virtual Nodes)", 
+                "quantity": 1,
+                },
+            {
+                "name": "Red Hat Satellite Infrastructure Subscription",
+                "quantity": 1
+            },
+        ],
+        "simple_content_access": "enabled",
+    }
+    manifester = Manifester(manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None))
+    assert manifester.subscription_data == manifest_data["subscription_data"]
+    assert manifester.simple_content_access == manifest_data["simple_content_access"]
+    assert manifester.token_request_url == manifest_data["url"]["token_request"]
+    assert manifester.allocations_url == manifest_data["url"]["allocations"]
+    assert manifester.sat_version == manifest_data["sat_version"]
+
