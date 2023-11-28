@@ -208,6 +208,6 @@ def test_correct_subs_added_to_allocation():
 
     manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
     manifester.get_manifest()
-    sub_names_from_config = [ x["NAME"] for x in manifester.subscription_data ]
-    for pool in manifester._active_pools:
-        assert pool["subscriptionName"] in sub_names_from_config
+    active_subs = sorted([ x["subscriptionName"] for x in manifester._active_pools ])
+    sub_names_from_config = sorted([ x["NAME"] for x in manifester.subscription_data ])
+    assert active_subs == sub_names_from_config
