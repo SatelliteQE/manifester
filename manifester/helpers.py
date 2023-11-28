@@ -19,7 +19,6 @@ def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_time
     if response.status_code in [429, 500, 504]:
         new_wait = _cur_timeout * 2
         if new_wait > max_timeout:
-            breakpoint()
             raise Exception("Retry timeout exceeded")
         logger.debug(f"Trying again in {_cur_timeout} seconds")
         time.sleep(_cur_timeout)

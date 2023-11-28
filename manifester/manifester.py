@@ -158,7 +158,10 @@ class Manifester:
                 ],
                 cmd_kwargs=data,
             ).json()
-            _results = len(self._subscription_pools["body"])
+            if self.is_mock:
+                _results = len(self._subscription_pools.body)
+            else:
+                _results = len(self._subscription_pools["body"])
             # The endpoint used in the above API call can return a maximum of 50 subscription pools.
             # For organizations with more than 50 subscription pools, the loop below works around
             # this limit by repeating calls with a progressively larger value for the `offset`
@@ -180,9 +183,14 @@ class Manifester:
                     ],
                     cmd_kwargs=data,
                 ).json()
-                self._subscription_pools["body"] += offset_pools["body"]
-                _results = len(offset_pools["body"])
-                total_pools = len(self._subscription_pools["body"])
+                if self.is_mock:
+                    self._subscription_pools.body += offset_pools.body
+                    _results = len(offset_pools.body)
+                    total_pools = len(self._subscription_pools.body)
+                else:
+                    self._subscription_pools["body"] += offset_pools["body"]
+                    _results = len(offset_pools["body"])
+                    total_pools = len(self._subscription_pools["body"])
                 logger.debug(
                     f"Total subscription pools available for this allocation: {total_pools}"
                 )
@@ -346,6 +354,7 @@ class Manifester:
         request_count = 1
         limit_exceeded = False
         while export_job.status_code != 200:
+            print(export_job.status_code)
             export_job = simple_retry(
                 self.requester.get,
                 cmd_args=[

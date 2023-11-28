@@ -7,13 +7,7 @@ from manifester.settings import settings
 from manifester.helpers import MockStub, fake_http_response_code
 import pytest
 import random
-
-def test_basic_init(manifest_category="golden_ticket"):
-    """Test that manifester can initialize with the minimum required arguments and verify that resulting object has an access token attribute"""
-
-    manifester_inst = Manifester(manifest_category=manifest_category, requester=RhsmApiStub(in_dict=None))
-    assert isinstance(manifester_inst, Manifester)
-    assert manifester_inst.access_token == "this is a simulated access token"
+import string
 
 class RhsmApiStub(MockStub):
 
@@ -47,12 +41,34 @@ class RhsmApiStub(MockStub):
             self.version_response = {'body': [
                 {'value': 'sat-6.14', 'description': 'Satellite 6.14'},
                 {'value': 'sat-6.13', 'description': 'Satellite 6.13'},
-                {'value': 'sat-6.12', 'description': 'Satellite 6.12'}
+                {'value': 'sat-6.12', 'description': 'Satellite 6.12'},
             ]}
             return self
-        if args[0].endswith("pools"):
-            self.body = [{'id': '987adf2a8977', 'subscriptionName': 'Red Hat Satellite Infrastructure Subscription', 'entitlementsAvailable': 13}]
+        if args[0].endswith("pools") and not self.has_offset:
+            self.body = [{
+                'id': '987adf2a8977', 
+                'subscriptionName': 'Red Hat Satellite Infrastructure Subscription',
+                'entitlementsAvailable': 13,
+                }]
             return self
+        if args[0].endswith("pools") and self.has_offset:
+            if kwargs["params"]["offset"] != 50:
+                self.body = []
+                for x in range(50):
+                    self.body.append({
+                        'id': f'{"".join(random.sample(string.ascii_letters, 12))}', 
+                        'subscriptionName': 'Red Hat Satellite Infrastructure Subscription', 
+                        'entitlementsAvailable': random.randrange(100),
+                        })
+                return self
+            else:
+                self.body += [{
+                    'id': '987adf2a8977', 
+                    'subscriptionName': 'Red Hat Satellite Infrastructure Subscription',
+                    'entitlementsAvailable': 13,
+                    }]
+                return self
+
         if "allocations" in args[0] and not ("export" in args[0] or "pools" in args[0]):
             self.allocation_data = "this allocation data also includes entitlement data"
             return self
@@ -61,7 +77,7 @@ class RhsmApiStub(MockStub):
             return self
         if "exportJob" in args[0]:
             del self.status_code
-            if self.force_export_failure:
+            if self.force_export_failure is True and not self.has_offset:
                 self._good_codes = [202]
             else:
                 self._good_codes = [202, 200]
@@ -83,6 +99,13 @@ class RhsmApiStub(MockStub):
             self._good_codes=[204]
             return self
 
+
+def test_basic_init(manifest_category="golden_ticket"):
+    """Test that manifester can initialize with the minimum required arguments and verify that resulting object has an access token attribute"""
+
+    manifester_inst = Manifester(manifest_category=manifest_category, requester=RhsmApiStub(in_dict=None))
+    assert isinstance(manifester_inst, Manifester)
+    assert manifester_inst.access_token == "this is a simulated access token"
 
 def test_create_allocation():
     """Test that manifester's create_subscription_allocation method returns a UUID"""
@@ -155,3 +178,11 @@ def test_ingest_manifest_data_via_dict():
     assert manifester.allocations_url == manifest_data["url"]["allocations"]
     assert manifester.sat_version == manifest_data["sat_version"]
 
+def test_get_subscription_pools_with_offset():
+    """Tests that manifester can retrieve all subscription pools from an account containing more than 
+    50 pools"""
+
+    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
+    manifester.requester.has_offset = True
+    manifester.get_manifest()
+    assert len(manifester.subscription_pools.body) > 50
