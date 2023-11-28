@@ -43,6 +43,7 @@ class Manifester:
         self.allocations_url = self.manifest_data.get("url", {}).get("allocations", settings.url.allocations)
         self._access_token = None
         self._subscription_pools = None
+        self._active_pools = []
         self.sat_version = process_sat_version(
             kwargs.get("sat_version", self.manifest_data.sat_version),
             self.valid_sat_versions,
@@ -159,9 +160,8 @@ class Manifester:
                 cmd_kwargs=data,
             ).json()
             if self.is_mock:
-                _results = len(self._subscription_pools.body)
-            else:
-                _results = len(self._subscription_pools["body"])
+                self._subscription_pools = self._subscription_pools.pool_response
+            _results = len(self._subscription_pools["body"])
             # The endpoint used in the above API call can return a maximum of 50 subscription pools.
             # For organizations with more than 50 subscription pools, the loop below works around
             # this limit by repeating calls with a progressively larger value for the `offset`
@@ -184,13 +184,10 @@ class Manifester:
                     cmd_kwargs=data,
                 ).json()
                 if self.is_mock:
-                    self._subscription_pools.body += offset_pools.body
-                    _results = len(offset_pools.body)
-                    total_pools = len(self._subscription_pools.body)
-                else:
-                    self._subscription_pools["body"] += offset_pools["body"]
-                    _results = len(offset_pools["body"])
-                    total_pools = len(self._subscription_pools["body"])
+                    offset_pools = offset_pools.pool_response
+                self._subscription_pools["body"] += offset_pools["body"]
+                _results = len(offset_pools["body"])
+                total_pools = len(self._subscription_pools["body"])
                 logger.debug(
                     f"Total subscription pools available for this allocation: {total_pools}"
                 )
@@ -253,14 +250,11 @@ class Manifester:
 
     def process_subscription_pools(self, subscription_pools, subscription_data):
         logger.debug(f"Finding a matching pool for {subscription_data['name']}.")
-        if self.is_mock:
-            matching = [d for d in subscription_pools.body if d["subscriptionName"] == subscription_data["name"]]
-        else:
-            matching = [
-                d
-                for d in subscription_pools["body"]
-                if d["subscriptionName"] == subscription_data["name"]
-            ]
+        matching = [
+            d
+            for d in subscription_pools["body"]
+            if d["subscriptionName"] == subscription_data["name"]
+        ]
         logger.debug(
             f"The following pools are matches for this subscription: {matching}"
         )
@@ -312,12 +306,14 @@ class Manifester:
                             f"Successfully added {subscription_data['quantity']} entitlements of "
                             f"{subscription_data['name']} to the allocation."
                         )
+                        self._active_pools.append(match)
                         break
                 elif add_entitlements.status_code == 200:
                     logger.debug(
                         f"Successfully added {subscription_data['quantity']} entitlements of "
                         f"{subscription_data['name']} to the allocation."
                     )
+                    self._active_pools.append(match)
                     break
                 else:
                     raise Exception(

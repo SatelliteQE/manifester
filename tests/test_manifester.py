@@ -8,13 +8,40 @@ from manifester.helpers import MockStub, fake_http_response_code
 import pytest
 import random
 import string
+import uuid
 
+sub_pool_response = {
+    'body':
+    [
+        {
+            'id': f'{uuid.uuid4().hex}',
+            'subscriptionName': 'Red Hat Satellite Infrastructure Subscription',
+            'entitlementsAvailable': 8,
+        },
+        {
+            'id': f'{uuid.uuid4().hex}',
+            'subscriptionName': 'Red Hat Enterprise Linux for Virtual Datacenters, Premium',
+            'entitlementsAvailable': 8,
+        },
+        {
+            'id': f'{uuid.uuid4().hex}',
+            'subscriptionName': 'Red Hat Beta Access',
+            'entitlementsAvailable': 8,
+        },
+        {
+            'id': f'{uuid.uuid4().hex}',
+            'subscriptionName': 'Red Hat Enterprise Linux Server, Premium (Physical or Virtual Nodes)',
+            'entitlementsAvailable': 8,
+        },
+    ],
+}
 class RhsmApiStub(MockStub):
 
     def __init__(self, in_dict=None, **kwargs):
         self._good_codes = kwargs.get("good_codes", [200])
         self._bad_codes = kwargs.get("bad_codes", [429, 500, 504])
         self._fail_rate = kwargs.get("fail_rate", 10)
+        self._has_offset = kwargs.get("has_offset", False)
         super().__init__(in_dict)
 
     @cached_property
@@ -44,31 +71,22 @@ class RhsmApiStub(MockStub):
                 {'value': 'sat-6.12', 'description': 'Satellite 6.12'},
             ]}
             return self
-        if args[0].endswith("pools") and not self.has_offset:
-            self.body = [{
-                'id': '987adf2a8977', 
-                'subscriptionName': 'Red Hat Satellite Infrastructure Subscription',
-                'entitlementsAvailable': 13,
-                }]
+        if args[0].endswith("pools") and not self._has_offset:
+            self.pool_response = sub_pool_response
             return self
-        if args[0].endswith("pools") and self.has_offset:
+        if args[0].endswith("pools") and self._has_offset:
             if kwargs["params"]["offset"] != 50:
-                self.body = []
+                self.pool_response = {'body': []}
                 for x in range(50):
-                    self.body.append({
+                    self.pool_response["body"].append({
                         'id': f'{"".join(random.sample(string.ascii_letters, 12))}', 
                         'subscriptionName': 'Red Hat Satellite Infrastructure Subscription', 
                         'entitlementsAvailable': random.randrange(100),
                         })
                 return self
             else:
-                self.body += [{
-                    'id': '987adf2a8977', 
-                    'subscriptionName': 'Red Hat Satellite Infrastructure Subscription',
-                    'entitlementsAvailable': 13,
-                    }]
+                self.pool_response["body"] += sub_pool_response["body"]
                 return self
-
         if "allocations" in args[0] and not ("export" in args[0] or "pools" in args[0]):
             self.allocation_data = "this allocation data also includes entitlement data"
             return self
@@ -77,7 +95,7 @@ class RhsmApiStub(MockStub):
             return self
         if "exportJob" in args[0]:
             del self.status_code
-            if self.force_export_failure is True and not self.has_offset:
+            if self.force_export_failure is True and not self._has_offset:
                 self._good_codes = [202]
             else:
                 self._good_codes = [202, 200]
@@ -179,10 +197,8 @@ def test_ingest_manifest_data_via_dict():
     assert manifester.sat_version == manifest_data["sat_version"]
 
 def test_get_subscription_pools_with_offset():
-    """Tests that manifester can retrieve all subscription pools from an account containing more than 
-    50 pools"""
+    """Tests that manifester can retrieve all subscription pools from an account containing more than 50 pools"""
 
-    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
-    manifester.requester.has_offset = True
+    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, has_offset=True))
     manifester.get_manifest()
-    assert len(manifester.subscription_pools.body) > 50
+    assert len(manifester.subscription_pools["body"]) > 50
