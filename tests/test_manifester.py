@@ -202,3 +202,12 @@ def test_get_subscription_pools_with_offset():
     manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, has_offset=True))
     manifester.get_manifest()
     assert len(manifester.subscription_pools["body"]) > 50
+
+def test_correct_subs_added_to_allocation():
+    """Test that the subscriptions added to the subscription allocation match the subscription data defined in manifester's config"""
+
+    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
+    manifester.get_manifest()
+    sub_names_from_config = [ x["NAME"] for x in manifester.subscription_data ]
+    for pool in manifester._active_pools:
+        assert pool["subscriptionName"] in sub_names_from_config
