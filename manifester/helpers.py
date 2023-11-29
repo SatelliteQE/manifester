@@ -1,7 +1,7 @@
+from collections import UserDict
 import random
 import time
 
-from collections import UserDict
 from logzero import logger
 
 
@@ -25,9 +25,10 @@ def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_time
         response = simple_retry(cmd, cmd_args, cmd_kwargs, max_timeout, new_wait)
     return response
 
+
 def process_sat_version(sat_version, valid_sat_versions):
     """Ensure that the sat_version parameter is properly formatted for the RHSM API when creating
-       a subscription allocation with the 'POST allocations' endpoint"""
+    a subscription allocation with the 'POST allocations' endpoint"""
     if sat_version not in valid_sat_versions:
         # The valid values for the sat_version parameter when creating a subscription allocation
         # are all 8 characters or less (e.g. 'sat-6.11'). Some data sources may include a Z-stream
@@ -40,9 +41,12 @@ def process_sat_version(sat_version, valid_sat_versions):
             sat_version = ".".join(sat_version)
         # If sat_version is still not valid, default to the latest valid version.
         if sat_version not in valid_sat_versions:
-            valid_sat_versions.sort(key = lambda i: int(i.split('-')[-1].split('.')[-1]), reverse = True)
+            valid_sat_versions.sort(
+                key=lambda i: int(i.split('-')[-1].split('.')[-1]), reverse=True
+            )
             return valid_sat_versions[0]
     return sat_version
+
 
 def fake_http_response_code(good_codes=None, bad_codes=None, fail_rate=20):
     """Return an HTTP response code randomly selected from sets of good and bad codes"""

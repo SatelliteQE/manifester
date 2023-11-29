@@ -1,8 +1,7 @@
 import os
 from pathlib import Path
 
-from dynaconf import Dynaconf
-from dynaconf import Validator
+from dynaconf import Dynaconf, Validator
 
 settings_file = "manifester_settings.yaml"
 MANIFESTER_DIRECTORY = Path()

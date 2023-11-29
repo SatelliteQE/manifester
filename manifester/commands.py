@@ -15,9 +15,7 @@ def cli():
     type=str,
     help="Category of manifest (golden_ticket or robottelo_automation by default)",
 )
-@click.option(
-    "--allocation_name", type=str, help="Name of upstream subscription allocation"
-)
+@click.option("--allocation_name", type=str, help="Name of upstream subscription allocation")
 def get_manifest(manifest_category, allocation_name):
     manifester = Manifester(manifest_category, allocation_name)
     manifester.create_subscription_allocation()

@@ -1,14 +1,12 @@
-import random
-import string
-from dynaconf.utils.boxing import DynaBox
 from functools import cached_property
 from pathlib import Path
+import random
+import string
 
+from dynaconf.utils.boxing import DynaBox
 from logzero import logger
 
-from manifester.helpers import simple_retry
-from manifester.helpers import process_sat_version
-from manifester.logger import setup_logzero
+from manifester.helpers import process_sat_version, simple_retry
 from manifester.settings import settings
 
 
@@ -23,11 +21,10 @@ class Manifester:
             self.is_mock = True
         else:
             import requests
+
             self.requester = requests
             self.is_mock = False
-        self.allocation_name = allocation_name or "".join(
-            random.sample(string.ascii_letters, 10)
-        )
+        self.allocation_name = allocation_name or "".join(random.sample(string.ascii_letters, 10))
         self.manifest_name = Path(f'{self.allocation_name}_manifest.zip')
         self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
         self.subscription_data = self.manifest_data.subscription_data
@@ -39,8 +36,12 @@ class Manifester:
         self.simple_content_access = kwargs.get(
             "simple_content_access", self.manifest_data.simple_content_access
         )
-        self.token_request_url = self.manifest_data.get("url", {}).get("token_request", settings.url.token_request)
-        self.allocations_url = self.manifest_data.get("url", {}).get("allocations", settings.url.allocations)
+        self.token_request_url = self.manifest_data.get("url", {}).get(
+            "token_request", settings.url.token_request
+        )
+        self.allocations_url = self.manifest_data.get("url", {}).get(
+            "allocations", settings.url.allocations
+        )
         self._access_token = None
         self._subscription_pools = None
         self._active_pools = []
@@ -64,7 +65,7 @@ class Manifester:
             else:
                 self._access_token = token_data["access_token"]
         return self._access_token
-    
+
     @cached_property
     def valid_sat_versions(self):
         headers = {
@@ -74,11 +75,9 @@ class Manifester:
         valid_sat_versions = []
         sat_versions_response = simple_retry(
             self.requester.get,
-            cmd_args=[
-                    f"{self.allocations_url}/versions"
-                ],
+            cmd_args=[f"{self.allocations_url}/versions"],
             cmd_kwargs=headers,
-            ).json()
+        ).json()
         if self.is_mock:
             sat_versions_response = sat_versions_response.version_response
         for ver_dict in sat_versions_response["body"]:
@@ -100,16 +99,16 @@ class Manifester:
             cmd_args=[f"{self.allocations_url}"],
             cmd_kwargs=allocation_data,
         ).json()
-        logger.debug(
-            f"Received response {self.allocation} when attempting to create allocation."
-        )
-        if ("error" in self.allocation.keys() and 
-            "invalid version" in self.allocation['error'].values()):
+        logger.debug(f"Received response {self.allocation} when attempting to create allocation.")
+        if (
+            "error" in self.allocation.keys()
+            and "invalid version" in self.allocation['error'].values()
+        ):
             raise ValueError(
-                                f"{self.sat_version} is not a valid version number."
-                                "Versions must be in the form of \"sat-X.Y\". Current"
-                                f"valid versions are {self.valid_sat_versions}."
-                            )
+                f"{self.sat_version} is not a valid version number."
+                "Versions must be in the form of \"sat-X.Y\". Current"
+                f"valid versions are {self.valid_sat_versions}."
+            )
         self.allocation_uuid = self.allocation["body"]["uuid"]
         if self.simple_content_access == "disabled":
             simple_retry(
@@ -154,9 +153,7 @@ class Manifester:
             }
             self._subscription_pools = simple_retry(
                 self.requester.get,
-                cmd_args=[
-                    f"{self.allocations_url}/{self.allocation_uuid}/pools"
-                ],
+                cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}/pools"],
                 cmd_kwargs=data,
             ).json()
             if self.is_mock:
@@ -168,9 +165,7 @@ class Manifester:
             # parameter.
             while _results == 50:
                 _offset += 50
-                logger.debug(
-                    f"Fetching additional subscription pools with an offset of {_offset}."
-                )
+                logger.debug(f"Fetching additional subscription pools with an offset of {_offset}.")
                 data = {
                     "headers": {"Authorization": f"Bearer {self.access_token}"},
                     "proxies": self.manifest_data.get("proxies", settings.proxies),
@@ -178,9 +173,7 @@ class Manifester:
                 }
                 offset_pools = simple_retry(
                     self.requester.get,
-                    cmd_args=[
-                        f"{self.allocations_url}/{self.allocation_uuid}/pools"
-                    ],
+                    cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}/pools"],
                     cmd_kwargs=data,
                 ).json()
                 if self.is_mock:
@@ -201,17 +194,13 @@ class Manifester:
         }
         add_entitlements = simple_retry(
             self.requester.post,
-            cmd_args=[
-                f"{self.allocations_url}/{self.allocation_uuid}/entitlements"
-            ],
+            cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}/entitlements"],
             cmd_kwargs=data,
         )
         return add_entitlements
 
     def verify_allocation_entitlements(self, entitlement_quantity, subscription_name):
-        logger.info(
-            f"Verifying the entitlement quantity of {subscription_name} on the allocation."
-        )
+        logger.info(f"Verifying the entitlement quantity of {subscription_name} on the allocation.")
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
             "proxies": self.manifest_data.get("proxies", settings.proxies),
@@ -232,9 +221,7 @@ class Manifester:
         logger.debug(f"Current entitlement is {current_entitlement}")
         self.attached_quantity = current_entitlement[0]["entitlementQuantity"]
         if self.attached_quantity == entitlement_quantity:
-            logger.debug(
-                f"Operation successful. Attached {self.attached_quantity} entitlements."
-            )
+            logger.debug(f"Operation successful. Attached {self.attached_quantity} entitlements.")
             return True
         elif self.attached_quantity < entitlement_quantity:
             logger.debug(
@@ -255,12 +242,12 @@ class Manifester:
             for d in subscription_pools["body"]
             if d["subscriptionName"] == subscription_data["name"]
         ]
-        logger.debug(
-            f"The following pools are matches for this subscription: {matching}"
-        )
+        logger.debug(f"The following pools are matches for this subscription: {matching}")
         for match in matching:
-            if (match["entitlementsAvailable"] > subscription_data["quantity"] or
-                match["entitlementsAvailable"] == -1):
+            if (
+                match["entitlementsAvailable"] > subscription_data["quantity"]
+                or match["entitlementsAvailable"] == -1
+            ):
                 logger.debug(
                     f"Pool {match['id']} is a match for this subscription and has "
                     f"{match['entitlementsAvailable']} entitlements available."
@@ -334,17 +321,13 @@ class Manifester:
         )
         trigger_export_job = simple_retry(
             self.requester.get,
-            cmd_args=[
-                f"{self.allocations_url}/{self.allocation_uuid}/export"
-            ],
+            cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}/export"],
             cmd_kwargs=data,
         ).json()
         export_job_id = trigger_export_job["body"]["exportJobID"]
         export_job = simple_retry(
             self.requester.get,
-            cmd_args=[
-                f"{self.allocations_url}/{self.allocation_uuid}/exportJob/{export_job_id}"
-            ],
+            cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}/exportJob/{export_job_id}"],
             cmd_kwargs=data,
         )
         request_count = 1
@@ -358,9 +341,7 @@ class Manifester:
                 ],
                 cmd_kwargs=data,
             )
-            logger.debug(
-                f"Attempting to export manifest. Attempt number: {request_count}"
-            )
+            logger.debug(f"Attempting to export manifest. Attempt number: {request_count}")
             if request_count > 50:
                 limit_exceeded = True
                 logger.info(
