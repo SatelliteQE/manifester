@@ -41,6 +41,7 @@ dependencies = [
     "click",
     "dynaconf",
     "logzero",
+    "pytest",
     "pyyaml",
     "requests",
     "setuptools",

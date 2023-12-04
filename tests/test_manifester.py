@@ -11,7 +11,7 @@ from manifester.helpers import MockStub, fake_http_response_code
 manifest_data = {
     "log_level": "debug",
     "offline_token": "test",
-    "proxies": {"https:"},
+    "proxies": {"https": ""},
     "url": {
         "token_request": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token",
         "allocations": "https://api.access.redhat.com/management/v1/allocations",
