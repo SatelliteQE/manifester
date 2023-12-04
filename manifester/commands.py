@@ -1,3 +1,4 @@
+"""Defines the CLI commands for Manifester."""
 import click
 
 from manifester import Manifester
@@ -6,6 +7,7 @@ from manifester import Manifester
 # To do: add a command for returning subscription pools
 @click.group
 def cli():
+    """Command-line interface for manifester."""
     pass
 
 
@@ -17,6 +19,7 @@ def cli():
 )
 @click.option("--allocation_name", type=str, help="Name of upstream subscription allocation")
 def get_manifest(manifest_category, allocation_name):
+    """Return a subscription manifester based on the settings for the provided manifest_category."""
     manifester = Manifester(manifest_category, allocation_name)
     manifester.create_subscription_allocation()
     for sub in manifester.subscription_data:

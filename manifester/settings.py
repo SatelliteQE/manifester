@@ -1,3 +1,4 @@
+"""Retrieves settings from configuration file and runs Dynaconf validators."""
 import os
 from pathlib import Path
 

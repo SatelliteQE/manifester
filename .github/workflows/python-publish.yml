@@ -12,12 +12,12 @@ jobs:
     strategy:
       matrix:
         # build/push in lowest support python version
-        python-version: [ 3.8 ]
+        python-version: [ 3.10 ]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - uses: actions/setup-python@v2
+    - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -29,7 +29,7 @@ jobs:
         python -m twine check dist/*
 
     - name: Build and publish
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@v1.8.11
       with:
         user: __token__
         password: ${{ secrets.PYPI_TOKEN }}

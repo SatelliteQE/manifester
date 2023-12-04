@@ -11,7 +11,7 @@ from manifester.helpers import MockStub, fake_http_response_code
 manifest_data = {
     "log_level": "debug",
     "offline_token": "test",
-    "proxies": {"https:" ""},
+    "proxies": {"https:"},
     "url": {
         "token_request": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token",
         "allocations": "https://api.access.redhat.com/management/v1/allocations",
@@ -31,32 +31,34 @@ manifest_data = {
 }
 
 sub_pool_response = {
-    'body': [
+    "body": [
         {
-            'id': f'{uuid.uuid4().hex}',
-            'subscriptionName': 'Red Hat Satellite Infrastructure Subscription',
-            'entitlementsAvailable': 8,
+            "id": f"{uuid.uuid4().hex}",
+            "subscriptionName": "Red Hat Satellite Infrastructure Subscription",
+            "entitlementsAvailable": 8,
         },
         {
-            'id': f'{uuid.uuid4().hex}',
-            'subscriptionName': 'Red Hat Enterprise Linux for Virtual Datacenters, Premium',
-            'entitlementsAvailable': 8,
+            "id": f"{uuid.uuid4().hex}",
+            "subscriptionName": "Red Hat Enterprise Linux for Virtual Datacenters, Premium",
+            "entitlementsAvailable": 8,
         },
         {
-            'id': f'{uuid.uuid4().hex}',
-            'subscriptionName': 'Red Hat Beta Access',
-            'entitlementsAvailable': 8,
+            "id": f"{uuid.uuid4().hex}",
+            "subscriptionName": "Red Hat Beta Access",
+            "entitlementsAvailable": 8,
         },
         {
-            'id': f'{uuid.uuid4().hex}',
-            'subscriptionName': 'Red Hat Enterprise Linux Server, Premium (Physical or Virtual Nodes)',
-            'entitlementsAvailable': 8,
+            "id": f"{uuid.uuid4().hex}",
+            "subscriptionName": "Red Hat Enterprise Linux Server, Premium (Physical or Virtual Nodes)",
+            "entitlementsAvailable": 8,
         },
     ],
 }
 
 
 class RhsmApiStub(MockStub):
+    """Returns mock responses for RHSM API endpoints related to creating manifests."""
+
     def __init__(self, in_dict=None, **kwargs):
         self._good_codes = kwargs.get("good_codes", [200])
         self._bad_codes = kwargs.get("bad_codes", [429, 500, 504])
@@ -66,11 +68,11 @@ class RhsmApiStub(MockStub):
 
     @cached_property
     def status_code(self):
+        """HTTP response code of current request."""
         return fake_http_response_code(self._good_codes, self._bad_codes, self._fail_rate)
 
     def post(self, *args, **kwargs):
-        """Simulate responses to POST requests for RHSM API endpoints used by Manifester"""
-
+        """Simulate responses to POST requests for RHSM API endpoints used by Manifester."""
         if args[0].endswith("openid-connect/token"):
             self.access_token = "this is a simulated access token"
             return self
@@ -82,14 +84,13 @@ class RhsmApiStub(MockStub):
             return self
 
     def get(self, *args, **kwargs):
-        """ "Simulate responses to GET requests for RHSM API endpoints used by Manifester"""
-
+        """Simulate responses to GET requests for RHSM API endpoints used by Manifester."""
         if args[0].endswith("versions"):
             self.version_response = {
-                'body': [
-                    {'value': 'sat-6.14', 'description': 'Satellite 6.14'},
-                    {'value': 'sat-6.13', 'description': 'Satellite 6.13'},
-                    {'value': 'sat-6.12', 'description': 'Satellite 6.12'},
+                "body": [
+                    {"value": "sat-6.14", "description": "Satellite 6.14"},
+                    {"value": "sat-6.13", "description": "Satellite 6.13"},
+                    {"value": "sat-6.12", "description": "Satellite 6.12"},
                 ]
             }
             return self
@@ -98,13 +99,13 @@ class RhsmApiStub(MockStub):
             return self
         if args[0].endswith("pools") and self._has_offset:
             if kwargs["params"]["offset"] != 50:
-                self.pool_response = {'body': []}
-                for x in range(50):
+                self.pool_response = {"body": []}
+                for _x in range(50):
                     self.pool_response["body"].append(
                         {
-                            'id': f'{"".join(random.sample(string.ascii_letters, 12))}',
-                            'subscriptionName': 'Red Hat Satellite Infrastructure Subscription',
-                            'entitlementsAvailable': random.randrange(100),
+                            "id": f'{"".join(random.sample(string.ascii_letters, 12))}',
+                            "subscriptionName": "Red Hat Satellite Infrastructure Subscription",
+                            "entitlementsAvailable": random.randrange(100),
                         }
                     )
                 return self
@@ -115,7 +116,7 @@ class RhsmApiStub(MockStub):
             self.allocation_data = "this allocation data also includes entitlement data"
             return self
         if args[0].endswith("export"):
-            self.body = {'exportJobID': '123456', 'href': 'exportJob'}
+            self.body = {"exportJobID": "123456", "href": "exportJob"}
             return self
         if "exportJob" in args[0]:
             del self.status_code
@@ -123,7 +124,7 @@ class RhsmApiStub(MockStub):
                 self._good_codes = [202]
             else:
                 self._good_codes = [202, 200]
-            self.body = {'exportID': 27, 'href': 'https://example.com/export/98ef892ac11'}
+            self.body = {"exportID": 27, "href": "https://example.com/export/98ef892ac11"}
             return self
         if "export" in args[0] and not args[0].endswith("export"):
             del self.status_code
@@ -133,8 +134,7 @@ class RhsmApiStub(MockStub):
             return self
 
     def delete(self, *args, **kwargs):
-        """Simulate responses to DELETE requests for RHSM API endpoints used by Manifester"""
-
+        """Simulate responses to DELETE requests for RHSM API endpoints used by Manifester."""
         if args[0].endswith("allocations/1234567890") and kwargs["params"]["force"] == "true":
             del self.status_code
             self.content = b""
@@ -143,9 +143,7 @@ class RhsmApiStub(MockStub):
 
 
 def test_basic_init(manifest_category="golden_ticket"):
-    """Test that manifester can initialize with the minimum required arguments and verify that
-    resulting object has an access token attribute"""
-
+    """Test that manifester can initialize with the minimum required arguments."""
     manifester_inst = Manifester(
         manifest_category=manifest_category, requester=RhsmApiStub(in_dict=None)
     )
@@ -154,16 +152,14 @@ def test_basic_init(manifest_category="golden_ticket"):
 
 
 def test_create_allocation():
-    """Test that manifester's create_subscription_allocation method returns a UUID"""
-
+    """Test that manifester's create_subscription_allocation method returns a UUID."""
     manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
     allocation_uuid = manifester.create_subscription_allocation()
     assert allocation_uuid.uuid == "1234567890"
 
 
 def test_negative_simple_retry_timeout():
-    """Test that exceeding the attempt limit when retrying a failed API call results in an exception"""
-
+    """Test that exceeding the attempt limit when retrying a failed API call results in an exception."""
     manifester = Manifester(
         manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, fail_rate=0)
     )
@@ -174,8 +170,7 @@ def test_negative_simple_retry_timeout():
 
 
 def test_negative_manifest_export_timeout():
-    """Test that exceeding the attempt limit when exporting a manifest results in an exception"""
-
+    """Test that exceeding the attempt limit when exporting a manifest results in an exception."""
     with pytest.raises(Exception) as exception:
         Manifester(
             manifest_category="golden_ticket",
@@ -185,8 +180,7 @@ def test_negative_manifest_export_timeout():
 
 
 def test_get_manifest():
-    """Test that manifester's get_manifest method returns a manifest"""
-
+    """Test that manifester's get_manifest method returns a manifest."""
     manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
     manifest = manifester.get_manifest()
     assert manifest.content.decode("utf-8") == "this is a simulated manifest"
@@ -194,8 +188,7 @@ def test_get_manifest():
 
 
 def test_delete_subscription_allocation():
-    """Test that manifester's delete_subscription_allocation method deletes a subscription allocation"""
-
+    """Test that manifester's delete_subscription_allocation method deletes a subscription allocation."""
     manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
     manifester.get_manifest()
     response = manifester.delete_subscription_allocation()
@@ -204,8 +197,7 @@ def test_delete_subscription_allocation():
 
 
 def test_ingest_manifest_data_via_dict():
-    """Test that manifester is able to read configuration data from a dictionary"""
-
+    """Test that manifester is able to read configuration data from a dictionary."""
     manifester = Manifester(manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None))
     assert manifester.subscription_data == manifest_data["subscription_data"]
     assert manifester.simple_content_access == manifest_data["simple_content_access"]
@@ -215,10 +207,7 @@ def test_ingest_manifest_data_via_dict():
 
 
 def test_get_subscription_pools_with_offset():
-    """Tests that manifester can retrieve all subscription pools from an account containing
-    more than 50 pools
-    """
-
+    """Tests that manifester can retrieve all pools from an account containing more than 50 pools."""
     manifester = Manifester(
         manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, has_offset=True)
     )
@@ -227,10 +216,7 @@ def test_get_subscription_pools_with_offset():
 
 
 def test_correct_subs_added_to_allocation():
-    """Test that the subscriptions added to the subscription allocation match the subscription data
-    defined in manifester's config
-    """
-
+    """Test that subs added to the allocation match the subscription data in manifester's config."""
     manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
     manifester.get_manifest()
     active_subs = sorted([x["subscriptionName"] for x in manifester._active_pools])
@@ -239,8 +225,7 @@ def test_correct_subs_added_to_allocation():
 
 
 def test_invalid_sat_version():
-    """Test that an invalid sat_version value will be replaced with the latest valid sat_version"""
-
+    """Test that an invalid sat_version value will be replaced with the latest valid sat_version."""
     manifest_data["sat_version"] = "sat-6.20"
     manifester = Manifester(manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None))
     assert manifester.sat_version == "sat-6.14"

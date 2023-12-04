@@ -1,3 +1,8 @@
+"""Main interface for the RHSM API.
+
+This module defines the `Manifester` class, which provides methods for authenticating to and
+interacting with the RHSM Subscription API for the purpose of generating a subscription manifest.
+"""
 from functools import cached_property
 from pathlib import Path
 import random
@@ -5,12 +10,15 @@ import string
 
 from dynaconf.utils.boxing import DynaBox
 from logzero import logger
+from requests.exceptions import Timeout
 
 from manifester.helpers import process_sat_version, simple_retry
 from manifester.settings import settings
 
 
 class Manifester:
+    """Main Manifester class responsible for generating a manifest from the provided settings."""
+
     def __init__(self, manifest_category, allocation_name=None, **kwargs):
         if isinstance(manifest_category, dict):
             self.manifest_data = DynaBox(manifest_category)
@@ -25,7 +33,7 @@ class Manifester:
             self.requester = requests
             self.is_mock = False
         self.allocation_name = allocation_name or "".join(random.sample(string.ascii_letters, 10))
-        self.manifest_name = Path(f'{self.allocation_name}_manifest.zip')
+        self.manifest_name = Path(f"{self.allocation_name}_manifest.zip")
         self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
         self.subscription_data = self.manifest_data.subscription_data
         self.token_request_data = {
@@ -52,6 +60,10 @@ class Manifester:
 
     @property
     def access_token(self):
+        """Representation of an RHSM API access token.
+
+        Used to authenticate requests to the RHSM API.
+        """
         if not self._access_token:
             token_request_data = {"data": self.token_request_data}
             logger.debug("Generating access token")
@@ -68,11 +80,11 @@ class Manifester:
 
     @cached_property
     def valid_sat_versions(self):
+        """Retrieves the list of valid Satellite versions from the RHSM API."""
         headers = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
             "proxies": self.manifest_data.get("proxies", settings.proxies),
         }
-        valid_sat_versions = []
         sat_versions_response = simple_retry(
             self.requester.get,
             cmd_args=[f"{self.allocations_url}/versions"],
@@ -80,11 +92,11 @@ class Manifester:
         ).json()
         if self.is_mock:
             sat_versions_response = sat_versions_response.version_response
-        for ver_dict in sat_versions_response["body"]:
-            valid_sat_versions.append(ver_dict["value"])
+        valid_sat_versions = [ver_dict["value"] for ver_dict in sat_versions_response["body"]]
         return valid_sat_versions
 
     def create_subscription_allocation(self):
+        """Creates a new consumer in the provided RHSM account and returns its UUID."""
         allocation_data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
             "proxies": self.manifest_data.get("proxies", settings.proxies),
@@ -100,15 +112,6 @@ class Manifester:
             cmd_kwargs=allocation_data,
         ).json()
         logger.debug(f"Received response {self.allocation} when attempting to create allocation.")
-        if (
-            "error" in self.allocation.keys()
-            and "invalid version" in self.allocation['error'].values()
-        ):
-            raise ValueError(
-                f"{self.sat_version} is not a valid version number."
-                "Versions must be in the form of \"sat-X.Y\". Current"
-                f"valid versions are {self.valid_sat_versions}."
-            )
         self.allocation_uuid = self.allocation["body"]["uuid"]
         if self.simple_content_access == "disabled":
             simple_retry(
@@ -127,6 +130,7 @@ class Manifester:
         return self.allocation_uuid
 
     def delete_subscription_allocation(self):
+        """Deletes the specified subscription allocation and returns the RHSM API's response."""
         self._access_token = None
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
@@ -144,6 +148,11 @@ class Manifester:
 
     @property
     def subscription_pools(self):
+        """Fetches the list of subscription pools from account.
+
+        Returns a list of dictionaries containing metadata from the pools.
+        """
+        max_results_per_page = 50
         if not self._subscription_pools:
             _offset = 0
             data = {
@@ -163,7 +172,7 @@ class Manifester:
             # For organizations with more than 50 subscription pools, the loop below works around
             # this limit by repeating calls with a progressively larger value for the `offset`
             # parameter.
-            while _results == 50:
+            while _results == max_results_per_page:
                 _offset += 50
                 logger.debug(f"Fetching additional subscription pools with an offset of {_offset}.")
                 data = {
@@ -187,6 +196,7 @@ class Manifester:
         return self._subscription_pools
 
     def add_entitlements_to_allocation(self, pool_id, entitlement_quantity):
+        """Attempts to add the set of subscriptions defined in the settings to the allocation."""
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
             "proxies": self.manifest_data.get("proxies", settings.proxies),
@@ -200,6 +210,7 @@ class Manifester:
         return add_entitlements
 
     def verify_allocation_entitlements(self, entitlement_quantity, subscription_name):
+        """Checks that the entitlements in the allocation match those defined in settings."""
         logger.info(f"Verifying the entitlement quantity of {subscription_name} on the allocation.")
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
@@ -236,6 +247,12 @@ class Manifester:
             return True
 
     def process_subscription_pools(self, subscription_pools, subscription_data):
+        """Loops through the list of subscription pools in the account.
+
+        Identifies pools that match the subscription names and quantities defined in settings, then
+        attempts to add the specified quantity of each subscription to the allocation.
+        """
+        success_code = 200
         logger.debug(f"Finding a matching pool for {subscription_data['name']}.")
         matching = [
             d
@@ -295,7 +312,7 @@ class Manifester:
                         )
                         self._active_pools.append(match)
                         break
-                elif add_entitlements.status_code == 200:
+                elif add_entitlements.status_code == success_code:
                     logger.debug(
                         f"Successfully added {subscription_data['quantity']} entitlements of "
                         f"{subscription_data['name']} to the allocation."
@@ -303,17 +320,23 @@ class Manifester:
                     self._active_pools.append(match)
                     break
                 else:
-                    raise Exception(
+                    raise RuntimeError(
                         "Something went wrong while adding entitlements. Received response status "
                         f"{add_entitlements.status_code}."
                     )
 
     def trigger_manifest_export(self):
+        """Triggers job to export manifest from subscription allocation.
+
+        Starts the export job, monitors the status of the job, and downloads the manifest on
+        successful completion of the job.
+        """
+        max_requests = 50
+        success_code = 200
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
             "proxies": self.manifest_data.get("proxies", settings.proxies),
         }
-        # Should this use the XDG Base Directory Specification?
         local_file = Path(f"manifests/{self.manifest_name}")
         local_file.parent.mkdir(parents=True, exist_ok=True)
         logger.info(
@@ -332,8 +355,7 @@ class Manifester:
         )
         request_count = 1
         limit_exceeded = False
-        while export_job.status_code != 200:
-            print(export_job.status_code)
+        while export_job.status_code != success_code:
             export_job = simple_retry(
                 self.requester.get,
                 cmd_args=[
@@ -342,14 +364,13 @@ class Manifester:
                 cmd_kwargs=data,
             )
             logger.debug(f"Attempting to export manifest. Attempt number: {request_count}")
-            if request_count > 50:
+            if request_count > max_requests:
                 limit_exceeded = True
                 logger.info(
                     "Manifest export job status check limit exceeded. This may indicate an "
                     "upstream issue with Red Hat Subscription Management."
                 )
-                raise Exception("Export timeout exceeded")
-                break
+                raise Timeout("Export timeout exceeded")
             request_count += 1
         if limit_exceeded:
             self.content = None
@@ -374,6 +395,11 @@ class Manifester:
         return manifest
 
     def get_manifest(self):
+        """Provides a subscription manifest based on settings.
+
+        Calls the methods required to create a new subscription allocation, add the appropriate
+        subscriptions to the allocation, export a manifest, and download the manifest.
+        """
         self.create_subscription_allocation()
         for sub in self.subscription_data:
             self.process_subscription_pools(
@@ -383,6 +409,7 @@ class Manifester:
         return self.trigger_manifest_export()
 
     def __enter__(self):
+        """Generates and returns a manifest."""
         try:
             return self.get_manifest()
         except:
@@ -390,4 +417,5 @@ class Manifester:
             raise
 
     def __exit__(self, *tb_args):
+        """Deletes subscription allocation on teardown."""
         self.delete_subscription_allocation()
