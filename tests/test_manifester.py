@@ -26,6 +26,14 @@ manifest_data = {
             "name": "Red Hat Satellite Infrastructure Subscription",
             "quantity": 1,
         },
+        {
+            "name": "Red Hat Beta Access",
+            "quantity": 1,
+        },
+        {
+            "name": "Red Hat Enterprise Linux for Virtual Datacenters, Premium",
+            "quantity": 1,
+        },
     ],
     "simple_content_access": "enabled",
 }
@@ -142,10 +150,10 @@ class RhsmApiStub(MockStub):
             return self
 
 
-def test_basic_init(manifest_category="golden_ticket"):
+def test_basic_init():
     """Test that manifester can initialize with the minimum required arguments."""
     manifester_inst = Manifester(
-        manifest_category=manifest_category, requester=RhsmApiStub(in_dict=None)
+        manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None)
     )
     assert isinstance(manifester_inst, Manifester)
     assert manifester_inst.access_token == "this is a simulated access token"
@@ -153,7 +161,7 @@ def test_basic_init(manifest_category="golden_ticket"):
 
 def test_create_allocation():
     """Test that manifester's create_subscription_allocation method returns a UUID."""
-    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
+    manifester = Manifester(manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None))
     allocation_uuid = manifester.create_subscription_allocation()
     assert allocation_uuid.uuid == "1234567890"
 
@@ -161,7 +169,7 @@ def test_create_allocation():
 def test_negative_simple_retry_timeout():
     """Test that exceeding the attempt limit when retrying a failed API call results in an exception."""
     manifester = Manifester(
-        manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, fail_rate=0)
+        manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None, fail_rate=0)
     )
     manifester.requester._fail_rate = 100
     with pytest.raises(Exception) as exception:
@@ -173,7 +181,7 @@ def test_negative_manifest_export_timeout():
     """Test that exceeding the attempt limit when exporting a manifest results in an exception."""
     with pytest.raises(Exception) as exception:
         Manifester(
-            manifest_category="golden_ticket",
+            manifest_category=manifest_data,
             requester=RhsmApiStub(in_dict={"force_export_failure": True}),
         )
     assert str(exception.value) == "Export timeout exceeded"
@@ -181,7 +189,7 @@ def test_negative_manifest_export_timeout():
 
 def test_get_manifest():
     """Test that manifester's get_manifest method returns a manifest."""
-    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
+    manifester = Manifester(manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None))
     manifest = manifester.get_manifest()
     assert manifest.content.decode("utf-8") == "this is a simulated manifest"
     assert manifest.status_code == 200
@@ -189,7 +197,7 @@ def test_get_manifest():
 
 def test_delete_subscription_allocation():
     """Test that manifester's delete_subscription_allocation method deletes a subscription allocation."""
-    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
+    manifester = Manifester(manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None))
     manifester.get_manifest()
     response = manifester.delete_subscription_allocation()
     assert response.status_code == 204
@@ -209,7 +217,7 @@ def test_ingest_manifest_data_via_dict():
 def test_get_subscription_pools_with_offset():
     """Tests that manifester can retrieve all pools from an account containing more than 50 pools."""
     manifester = Manifester(
-        manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None, has_offset=True)
+        manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None, has_offset=True)
     )
     manifester.get_manifest()
     assert len(manifester.subscription_pools["body"]) > 50
@@ -217,7 +225,7 @@ def test_get_subscription_pools_with_offset():
 
 def test_correct_subs_added_to_allocation():
     """Test that subs added to the allocation match the subscription data in manifester's config."""
-    manifester = Manifester(manifest_category="golden_ticket", requester=RhsmApiStub(in_dict=None))
+    manifester = Manifester(manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None))
     manifester.get_manifest()
     active_subs = sorted([x["subscriptionName"] for x in manifester._active_pools])
     sub_names_from_config = sorted([x["NAME"] for x in manifester.subscription_data])
