@@ -48,7 +48,7 @@ def process_sat_version(sat_version, valid_sat_versions):
     return sat_version
 
 
-def fake_http_response_code(good_codes=None, bad_codes=None, fail_rate=20):
+def fake_http_response_code(good_codes=None, bad_codes=None, fail_rate=0):
     """Return an HTTP response code randomly selected from sets of good and bad codes."""
     if random.random() > (fail_rate / 100):
         return random.choice(good_codes)

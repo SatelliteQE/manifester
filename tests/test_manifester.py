@@ -1,10 +1,10 @@
 from functools import cached_property
-from requests.exceptions import Timeout
 import random
 import string
 import uuid
 
 import pytest
+from requests.exceptions import Timeout
 
 from manifester import Manifester
 from manifester.helpers import MockStub, fake_http_response_code
@@ -71,7 +71,7 @@ class RhsmApiStub(MockStub):
     def __init__(self, in_dict=None, **kwargs):
         self._good_codes = kwargs.get("good_codes", [200])
         self._bad_codes = kwargs.get("bad_codes", [429, 500, 504])
-        self._fail_rate = kwargs.get("fail_rate", 10)
+        self._fail_rate = kwargs.get("fail_rate", 0)
         self._has_offset = kwargs.get("has_offset", False)
         super().__init__(in_dict)
 

@@ -44,12 +44,8 @@ class Manifester:
         self.simple_content_access = kwargs.get(
             "simple_content_access", self.manifest_data.simple_content_access
         )
-        self.token_request_url = self.manifest_data.get("url", {}).get(
-            "token_request", settings.url.token_request
-        )
-        self.allocations_url = self.manifest_data.get("url", {}).get(
-            "allocations", settings.url.allocations
-        )
+        self.token_request_url = self.manifest_data.get("url").get("token_request")
+        self.allocations_url = self.manifest_data.get("url").get("allocations")
         self._access_token = None
         self._subscription_pools = None
         self._active_pools = []
@@ -83,7 +79,7 @@ class Manifester:
         """Retrieves the list of valid Satellite versions from the RHSM API."""
         headers = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
-            "proxies": self.manifest_data.get("proxies", settings.proxies),
+            "proxies": self.manifest_data.get("proxies"),
         }
         sat_versions_response = simple_retry(
             self.requester.get,
@@ -99,7 +95,7 @@ class Manifester:
         """Creates a new consumer in the provided RHSM account and returns its UUID."""
         allocation_data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
-            "proxies": self.manifest_data.get("proxies", settings.proxies),
+            "proxies": self.manifest_data.get("proxies"),
             "params": {
                 "name": f"{self.allocation_name}",
                 "version": f"{self.sat_version}",
@@ -119,7 +115,7 @@ class Manifester:
                 cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
                 cmd_kwargs={
                     "headers": {"Authorization": f"Bearer {self.access_token}"},
-                    "proxies": self.manifest_data.get("proxies", settings.proxies),
+                    "proxies": self.manifest_data.get("proxies"),
                     "json": {"simpleContentAccess": "disabled"},
                 },
             )
@@ -134,7 +130,7 @@ class Manifester:
         self._access_token = None
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
-            "proxies": self.manifest_data.get("proxies", settings.proxies),
+            "proxies": self.manifest_data.get("proxies"),
             "params": {"force": "true"},
         }
         if self.is_mock:
@@ -157,7 +153,7 @@ class Manifester:
             _offset = 0
             data = {
                 "headers": {"Authorization": f"Bearer {self.access_token}"},
-                "proxies": self.manifest_data.get("proxies", settings.proxies),
+                "proxies": self.manifest_data.get("proxies"),
                 "params": {"offset": _offset},
             }
             self._subscription_pools = simple_retry(
@@ -172,12 +168,12 @@ class Manifester:
             # For organizations with more than 50 subscription pools, the loop below works around
             # this limit by repeating calls with a progressively larger value for the `offset`
             # parameter.
-            while _results == max_results_per_page:
+            while _results == MAX_RESULTS_PER_PAGE:
                 _offset += 50
                 logger.debug(f"Fetching additional subscription pools with an offset of {_offset}.")
                 data = {
                     "headers": {"Authorization": f"Bearer {self.access_token}"},
-                    "proxies": self.manifest_data.get("proxies", settings.proxies),
+                    "proxies": self.manifest_data.get("proxies"),
                     "params": {"offset": _offset},
                 }
                 offset_pools = simple_retry(
@@ -199,7 +195,7 @@ class Manifester:
         """Attempts to add the set of subscriptions defined in the settings to the allocation."""
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
-            "proxies": self.manifest_data.get("proxies", settings.proxies),
+            "proxies": self.manifest_data.get("proxies"),
             "params": {"pool": f"{pool_id}", "quantity": f"{entitlement_quantity}"},
         }
         add_entitlements = simple_retry(
@@ -214,7 +210,7 @@ class Manifester:
         logger.info(f"Verifying the entitlement quantity of {subscription_name} on the allocation.")
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
-            "proxies": self.manifest_data.get("proxies", settings.proxies),
+            "proxies": self.manifest_data.get("proxies"),
             "params": {"include": "entitlements"},
         }
         self.entitlement_data = simple_retry(
@@ -312,7 +308,7 @@ class Manifester:
                         )
                         self._active_pools.append(match)
                         break
-                elif add_entitlements.status_code == success_code:
+                elif add_entitlements.status_code == SUCCESS_CODE:
                     logger.debug(
                         f"Successfully added {subscription_data['quantity']} entitlements of "
                         f"{subscription_data['name']} to the allocation."
@@ -331,11 +327,11 @@ class Manifester:
         Starts the export job, monitors the status of the job, and downloads the manifest on
         successful completion of the job.
         """
-        max_requests = 50
-        success_code = 200
+        MAX_REQUESTS = 50
+        SUCCESS_CODE = 200
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
-            "proxies": self.manifest_data.get("proxies", settings.proxies),
+            "proxies": self.manifest_data.get("proxies"),
         }
         local_file = Path(f"manifests/{self.manifest_name}")
         local_file.parent.mkdir(parents=True, exist_ok=True)
@@ -355,7 +351,7 @@ class Manifester:
         )
         request_count = 1
         limit_exceeded = False
-        while export_job.status_code != success_code:
+        while export_job.status_code != SUCCESS_CODE:
             export_job = simple_retry(
                 self.requester.get,
                 cmd_args=[
@@ -364,7 +360,7 @@ class Manifester:
                 cmd_kwargs=data,
             )
             logger.debug(f"Attempting to export manifest. Attempt number: {request_count}")
-            if request_count > max_requests:
+            if request_count > MAX_REQUESTS:
                 limit_exceeded = True
                 logger.info(
                     "Manifest export job status check limit exceeded. This may indicate an "
