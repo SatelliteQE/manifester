@@ -152,7 +152,7 @@ class Manifester:
 
         Returns a list of dictionaries containing metadata from the pools.
         """
-        max_results_per_page = 50
+        MAX_RESULTS_PER_PAGE = 50
         if not self._subscription_pools:
             _offset = 0
             data = {
@@ -252,7 +252,7 @@ class Manifester:
         Identifies pools that match the subscription names and quantities defined in settings, then
         attempts to add the specified quantity of each subscription to the allocation.
         """
-        success_code = 200
+        SUCCESS_CODE = 200
         logger.debug(f"Finding a matching pool for {subscription_data['name']}.")
         matching = [
             d

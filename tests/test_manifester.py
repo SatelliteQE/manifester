@@ -1,4 +1,5 @@
 from functools import cached_property
+from requests.exceptions import Timeout
 import random
 import string
 import uuid
@@ -94,6 +95,7 @@ class RhsmApiStub(MockStub):
     def get(self, *args, **kwargs):
         """Simulate responses to GET requests for RHSM API endpoints used by Manifester."""
         if args[0].endswith("versions"):
+            del self.status_code
             self.version_response = {
                 "body": [
                     {"value": "sat-6.14", "description": "Satellite 6.14"},
@@ -179,11 +181,12 @@ def test_negative_simple_retry_timeout():
 
 def test_negative_manifest_export_timeout():
     """Test that exceeding the attempt limit when exporting a manifest results in an exception."""
-    with pytest.raises(Exception) as exception:
-        Manifester(
-            manifest_category=manifest_data,
-            requester=RhsmApiStub(in_dict={"force_export_failure": True}),
-        )
+    manifester = Manifester(
+        manifest_category=manifest_data,
+        requester=RhsmApiStub(in_dict={"force_export_failure": True}),
+    )
+    with pytest.raises(Timeout) as exception:
+        manifester.get_manifest()
     assert str(exception.value) == "Export timeout exceeded"
 
 
