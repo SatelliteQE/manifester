@@ -16,6 +16,7 @@ settings_path = MANIFESTER_DIRECTORY.joinpath("manifester_settings.yaml")
 validators = [
     # Validator("offline_token", must_exist=True),
     Validator("simple_content_access", default="enabled"),
+    Validator("username_prefix", len_min=3),
 ]
 settings = Dynaconf(
     settings_file=str(settings_path.absolute()),
