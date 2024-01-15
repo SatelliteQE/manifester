@@ -33,7 +33,7 @@ class Manifester:
             self.requester = requests
             self.is_mock = False
         self.allocation_name = allocation_name or f"{settings.username_prefix}-" + "".join(
-            random.sample(string.ascii_letters, 10)
+            random.sample(string.ascii_letters, 8)
         )
         self.manifest_name = Path(f"{self.allocation_name}_manifest.zip")
         self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
