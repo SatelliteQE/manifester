@@ -5,6 +5,9 @@ import time
 
 from logzero import logger
 
+MAX_RESULTS_PER_PAGE = 50
+RESULTS_LIMIT = 10000
+
 
 def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_timeout=1):
     """Re(Try) a function given its args and kwargs up until a max timeout."""
@@ -46,6 +49,75 @@ def process_sat_version(sat_version, valid_sat_versions):
             )
             return valid_sat_versions[0]
     return sat_version
+
+
+def fetch_paginated_data(manifester, endpoint):
+    """Fetch data from the API and account for pagination in the API response.
+
+    Currently used only for subscription allocations and subscription pools.
+    """
+    if endpoint == "allocations":
+        _endpoint_url = manifester.allocations_url
+        _endpoint_data = manifester._allocations
+    elif endpoint == "pools":
+        _endpoint_url = f"{manifester.allocations_url}/{manifester.allocation_uuid}/pools"
+        _endpoint_data = manifester._subscription_pools
+    else:
+        raise ValueError(
+            f"Received value {endpoint} for endpoint argument. Valid values "
+            "for endpoint are 'allocations' or 'pools'."
+        )
+    if not _endpoint_data:
+        _offset = 0
+        data = {
+            "headers": {"Authorization": f"Bearer {manifester.access_token}"},
+            "proxies": manifester.manifest_data.get("proxies"),
+            "params": {
+                "offset": _offset,
+                "limit": RESULTS_LIMIT,
+            },
+        }
+        _endpoint_data = simple_retry(
+            manifester.requester.get,
+            cmd_args=[f"{_endpoint_url}"],
+            cmd_kwargs=data,
+        ).json()
+        if manifester.is_mock and endpoint == "pools":
+            _endpoint_data = _endpoint_data.pool_response
+        elif manifester.is_mock and endpoint == "allocations":
+            _endpoint_data = _endpoint_data.allocations_response
+        _results = len(_endpoint_data["body"])
+        # The endpoints used in the above API call can return a maximum of 50 subscription pools.
+        # For organizations with more than 50 subscription pools, the loop below works around
+        # this limit by repeating calls with a progressively larger value for the `offset`
+        # parameter.
+        while _results == MAX_RESULTS_PER_PAGE:
+            _offset += 50
+            logger.debug(f"Fetching additional data with an offset of {_offset}.")
+            data = {
+                "headers": {"Authorization": f"Bearer {manifester.access_token}"},
+                "proxies": manifester.manifest_data.get("proxies"),
+                "params": {"offset": _offset, "limit": RESULTS_LIMIT},
+            }
+            offset_data = simple_retry(
+                manifester.requester.get,
+                cmd_args=[f"{_endpoint_url}"],
+                cmd_kwargs=data,
+            ).json()
+            if manifester.is_mock and endpoint == "pools":
+                offset_data = offset_data.pool_response
+            elif manifester.is_mock and endpoint == "allocations":
+                offset_data = offset_data.allocations_response
+            _endpoint_data["body"] += offset_data["body"]
+            _results = len(offset_data["body"])
+            total_results = len(_endpoint_data["body"])
+            logger.debug(f"Total {endpoint} available on this account: {total_results}")
+    if endpoint == "allocations":
+        return [
+            a for a in _endpoint_data["body"] if a["name"].startswith(manifester.username_prefix)
+        ]
+    elif endpoint == "pools":
+        return _endpoint_data
 
 
 def fake_http_response_code(good_codes=None, bad_codes=None, fail_rate=0):
