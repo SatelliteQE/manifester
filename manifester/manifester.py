@@ -12,8 +12,11 @@ from dynaconf.utils.boxing import DynaBox
 from logzero import logger
 from requests.exceptions import Timeout
 
-from manifester.helpers import process_sat_version, simple_retry
+from manifester.helpers import fetch_paginated_data, process_sat_version, simple_retry
 from manifester.settings import settings
+
+MAX_RESULTS_PER_PAGE = 50
+RESULTS_LIMIT = 10000
 
 
 class Manifester:
@@ -32,7 +35,8 @@ class Manifester:
 
             self.requester = requests
             self.is_mock = False
-        self.allocation_name = allocation_name or f"{settings.username_prefix}-" + "".join(
+        self.username_prefix = settings.username_prefix or self.manifest_data.username_prefix
+        self.allocation_name = allocation_name or f"{self.username_prefix}-" + "".join(
             random.sample(string.ascii_letters, 8)
         )
         self.manifest_name = Path(f"{self.allocation_name}_manifest.zip")
@@ -49,6 +53,7 @@ class Manifester:
         self.token_request_url = self.manifest_data.get("url").get("token_request")
         self.allocations_url = self.manifest_data.get("url").get("allocations")
         self._access_token = None
+        self._allocations = None
         self._subscription_pools = None
         self._active_pools = []
         self.sat_version = process_sat_version(
@@ -92,6 +97,19 @@ class Manifester:
             sat_versions_response = sat_versions_response.version_response
         valid_sat_versions = [ver_dict["value"] for ver_dict in sat_versions_response["body"]]
         return valid_sat_versions
+
+    @property
+    def subscription_allocations(self):
+        """Representation of subscription allocations in an account.
+
+        Filtered by username_prefix.
+        """
+        return fetch_paginated_data(self, "allocations")
+
+    @property
+    def subscription_pools(self):
+        """Reprentation of subscription pools in an account."""
+        return fetch_paginated_data(self, "pools")
 
     def create_subscription_allocation(self):
         """Creates a new consumer in the provided RHSM account and returns its UUID."""
@@ -143,55 +161,6 @@ class Manifester:
             cmd_kwargs=data,
         )
         return response
-
-    @property
-    def subscription_pools(self):
-        """Fetches the list of subscription pools from account.
-
-        Returns a list of dictionaries containing metadata from the pools.
-        """
-        MAX_RESULTS_PER_PAGE = 50
-        if not self._subscription_pools:
-            _offset = 0
-            data = {
-                "headers": {"Authorization": f"Bearer {self.access_token}"},
-                "proxies": self.manifest_data.get("proxies"),
-                "params": {"offset": _offset},
-            }
-            self._subscription_pools = simple_retry(
-                self.requester.get,
-                cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}/pools"],
-                cmd_kwargs=data,
-            ).json()
-            if self.is_mock:
-                self._subscription_pools = self._subscription_pools.pool_response
-            _results = len(self._subscription_pools["body"])
-            # The endpoint used in the above API call can return a maximum of 50 subscription pools.
-            # For organizations with more than 50 subscription pools, the loop below works around
-            # this limit by repeating calls with a progressively larger value for the `offset`
-            # parameter.
-            while _results == MAX_RESULTS_PER_PAGE:
-                _offset += 50
-                logger.debug(f"Fetching additional subscription pools with an offset of {_offset}.")
-                data = {
-                    "headers": {"Authorization": f"Bearer {self.access_token}"},
-                    "proxies": self.manifest_data.get("proxies"),
-                    "params": {"offset": _offset},
-                }
-                offset_pools = simple_retry(
-                    self.requester.get,
-                    cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}/pools"],
-                    cmd_kwargs=data,
-                ).json()
-                if self.is_mock:
-                    offset_pools = offset_pools.pool_response
-                self._subscription_pools["body"] += offset_pools["body"]
-                _results = len(offset_pools["body"])
-                total_pools = len(self._subscription_pools["body"])
-                logger.debug(
-                    f"Total subscription pools available for this allocation: {total_pools}"
-                )
-        return self._subscription_pools
 
     def add_entitlements_to_allocation(self, pool_id, entitlement_quantity):
         """Attempts to add the set of subscriptions defined in the settings to the allocation."""

@@ -13,6 +13,7 @@ manifest_data = {
     "log_level": "debug",
     "offline_token": "test",
     "proxies": {"https": ""},
+    "username_prefix": "test_user",
     "url": {
         "token_request": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token",
         "allocations": "https://api.access.redhat.com/management/v1/allocations",
@@ -62,6 +63,15 @@ sub_pool_response = {
             "entitlementsAvailable": 8,
         },
     ],
+}
+
+sub_allocations_response = {
+    "body": [
+        {
+            "uuid": f"{uuid.uuid4().hex}",
+            "name": "test_user-" + "".join(random.sample(string.ascii_letters, 8)),
+        }
+    ]
 }
 
 
@@ -122,7 +132,25 @@ class RhsmApiStub(MockStub):
             else:
                 self.pool_response["body"] += sub_pool_response["body"]
                 return self
-        if "allocations" in args[0] and not ("export" in args[0] or "pools" in args[0]):
+        if args[0].endswith("allocations") and self._has_offset:
+            if kwargs["params"]["offset"] != 50:
+                self.allocations_response = {"body": []}
+                for _x in range(50):
+                    self.allocations_response["body"].append(
+                        {
+                            "uuid": f"{uuid.uuid4().hex}",
+                            "name": f'{"".join(random.sample(string.ascii_letters, 12))}',
+                        }
+                    )
+                return self
+            else:
+                self.allocations_response["body"] += sub_allocations_response["body"]
+                return self
+        if (
+            "allocations" in args[0]
+            and not ("export" in args[0] or "pools" in args[0])
+            and not self._has_offset
+        ):
             self.allocation_data = "this allocation data also includes entitlement data"
             return self
         if args[0].endswith("export"):
@@ -224,6 +252,15 @@ def test_get_subscription_pools_with_offset():
     )
     manifester.get_manifest()
     assert len(manifester.subscription_pools["body"]) > 50
+
+
+def test_subscription_allocation_username_prefix_filter():
+    """Test that all allocations in subscription_allocations property matching username prefix."""
+    manifester = Manifester(
+        manifest_category=manifest_data, requester=RhsmApiStub(in_dict=None, has_offset=True)
+    )
+    for allocation in manifester.subscription_allocations:
+        assert allocation["name"].startswith(manifest_data["username_prefix"])
 
 
 def test_correct_subs_added_to_allocation():
