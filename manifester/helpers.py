@@ -87,9 +87,9 @@ def fetch_paginated_data(manifester, endpoint):
         elif manifester.is_mock and endpoint == "allocations":
             _endpoint_data = _endpoint_data.allocations_response
         _results = len(_endpoint_data["body"])
-        # The endpoints used in the above API call can return a maximum of 50 subscription pools.
-        # For organizations with more than 50 subscription pools, the loop below works around
-        # this limit by repeating calls with a progressively larger value for the `offset`
+        # The endpoints used in the above API call can return a maximum of 50 results. For
+        # organizations with more than 50 subscription allocations or pools, the loop below works
+        # around this limit by repeating calls with a progressively larger value for the `offset`
         # parameter.
         while _results == MAX_RESULTS_PER_PAGE:
             _offset += 50
