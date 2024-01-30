@@ -12,7 +12,12 @@ from dynaconf.utils.boxing import DynaBox
 from logzero import logger
 from requests.exceptions import Timeout
 
-from manifester.helpers import fetch_paginated_data, process_sat_version, simple_retry
+from manifester.helpers import (
+    fetch_paginated_data,
+    process_sat_version,
+    simple_retry,
+    update_inventory,
+)
 from manifester.settings import settings
 
 MAX_RESULTS_PER_PAGE = 50
@@ -143,6 +148,7 @@ class Manifester:
             f"Subscription allocation created with name {self.allocation_name} "
             f"and UUID {self.allocation_uuid}"
         )
+        update_inventory(self.subscription_allocations)
         return self.allocation_uuid
 
     def delete_subscription_allocation(self):
@@ -278,6 +284,7 @@ class Manifester:
                             f"{subscription_data['name']} to the allocation."
                         )
                         self._active_pools.append(match)
+                        update_inventory(self.subscription_allocations)
                         break
                 elif add_entitlements.status_code == SUCCESS_CODE:
                     logger.debug(
@@ -285,6 +292,7 @@ class Manifester:
                         f"{subscription_data['name']} to the allocation."
                     )
                     self._active_pools.append(match)
+                    update_inventory(self.subscription_allocations)
                     break
                 else:
                     raise RuntimeError(
@@ -386,3 +394,4 @@ class Manifester:
     def __exit__(self, *tb_args):
         """Deletes subscription allocation on teardown."""
         self.delete_subscription_allocation()
+        update_inventory(self.subscription_allocations)
