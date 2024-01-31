@@ -117,9 +117,18 @@ def fetch_paginated_data(manifester, endpoint):
             total_results = len(_endpoint_data["body"])
             logger.debug(f"Total {endpoint} available on this account: {total_results}")
     if endpoint == "allocations":
-        return [
-            a for a in _endpoint_data["body"] if a["name"].startswith(manifester.username_prefix)
-        ]
+        if hasattr(_endpoint_data, "force_export_failure"):
+            return [
+                a
+                for a in _endpoint_data.allocation_data["body"]
+                if a["name"].startswith(manifester.username_prefix)
+            ]
+        else:
+            return [
+                a
+                for a in _endpoint_data["body"]
+                if a["name"].startswith(manifester.username_prefix)
+            ]
     elif endpoint == "pools":
         return _endpoint_data
 
