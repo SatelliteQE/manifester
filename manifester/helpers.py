@@ -5,6 +5,7 @@ import random
 import time
 
 from logzero import logger
+from requests import HTTPError
 import yaml
 
 from manifester.settings import settings
@@ -86,6 +87,12 @@ def fetch_paginated_data(manifester, endpoint):
             cmd_args=[f"{_endpoint_url}"],
             cmd_kwargs=data,
         ).json()
+        if _endpoint_data.status_code in [400, 401, 403, 404]:
+            raise HTTPError(
+                f"Received HTTP {_endpoint_data.status_code} response code. Please "
+                "ensure that the request is a properly-formatted and authorized "
+                "request to a valid endpoint."
+            )
         if manifester.is_mock and endpoint == "pools":
             _endpoint_data = _endpoint_data.pool_response
         elif manifester.is_mock and endpoint == "allocations":
@@ -108,6 +115,12 @@ def fetch_paginated_data(manifester, endpoint):
                 cmd_args=[f"{_endpoint_url}"],
                 cmd_kwargs=data,
             ).json()
+            if offset_data.status_code in [400, 401, 403, 404]:
+                raise HTTPError(
+                    f"Received HTTP {_endpoint_data.status_code} response code. Please "
+                    "ensure that the request is a properly-formatted and authorized "
+                    "request to a valid endpoint."
+                )
             if manifester.is_mock and endpoint == "pools":
                 offset_data = offset_data.pool_response
             elif manifester.is_mock and endpoint == "allocations":
