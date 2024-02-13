@@ -13,6 +13,7 @@ manifest_data = {
     "log_level": "debug",
     "offline_token": "test",
     "proxies": {"https": ""},
+    "inventory_path": "manifester_inventory.yaml",
     "username_prefix": "test_user",
     "url": {
         "token_request": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token",
@@ -151,7 +152,7 @@ class RhsmApiStub(MockStub):
             and not ("export" in args[0] or "pools" in args[0])
             and not self._has_offset
         ):
-            self.allocation_data = "this allocation data also includes entitlement data"
+            self.allocation_data = sub_allocations_response
             return self
         if args[0].endswith("export"):
             self.body = {"exportJobID": "123456", "href": "exportJob"}

@@ -3,6 +3,7 @@ log_level: "info"
 offline_token: ""
 proxies: {"https": ""}
 username_prefix: "example_username"  # replace value with a unique username
+inventory_path: "manifester_inventory.yaml"
 manifest_category:
   golden_ticket:
     # An offline token can be generated at https://access.redhat.com/management/api

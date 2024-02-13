@@ -1,9 +1,14 @@
 """Defines helper functions used by Manifester."""
 from collections import UserDict
+from pathlib import Path
 import random
 import time
 
 from logzero import logger
+from requests import HTTPError
+import yaml
+
+from manifester.settings import settings
 
 MAX_RESULTS_PER_PAGE = 50
 RESULTS_LIMIT = 10000
@@ -81,7 +86,14 @@ def fetch_paginated_data(manifester, endpoint):
             manifester.requester.get,
             cmd_args=[f"{_endpoint_url}"],
             cmd_kwargs=data,
-        ).json()
+        )
+        if _endpoint_data.status_code in [400, 401, 403, 404]:
+            raise HTTPError(
+                f"Received HTTP {_endpoint_data.status_code} response code. Please "
+                "ensure that the request is a properly-formatted and authorized "
+                "request to a valid endpoint."
+            )
+        _endpoint_data = _endpoint_data.json()
         if manifester.is_mock and endpoint == "pools":
             _endpoint_data = _endpoint_data.pool_response
         elif manifester.is_mock and endpoint == "allocations":
@@ -103,7 +115,14 @@ def fetch_paginated_data(manifester, endpoint):
                 manifester.requester.get,
                 cmd_args=[f"{_endpoint_url}"],
                 cmd_kwargs=data,
-            ).json()
+            )
+            if offset_data.status_code in [400, 401, 403, 404]:
+                raise HTTPError(
+                    f"Received HTTP {_endpoint_data.status_code} response code. Please "
+                    "ensure that the request is a properly-formatted and authorized "
+                    "request to a valid endpoint."
+                )
+            offset_data = offset_data.json()
             if manifester.is_mock and endpoint == "pools":
                 offset_data = offset_data.pool_response
             elif manifester.is_mock and endpoint == "allocations":
@@ -113,11 +132,46 @@ def fetch_paginated_data(manifester, endpoint):
             total_results = len(_endpoint_data["body"])
             logger.debug(f"Total {endpoint} available on this account: {total_results}")
     if endpoint == "allocations":
-        return [
-            a for a in _endpoint_data["body"] if a["name"].startswith(manifester.username_prefix)
-        ]
+        if hasattr(_endpoint_data, "force_export_failure"):
+            return [
+                a
+                for a in _endpoint_data.allocation_data["body"]
+                if a["name"].startswith(manifester.username_prefix)
+            ]
+        else:
+            return [
+                a
+                for a in _endpoint_data["body"]
+                if a["name"].startswith(manifester.username_prefix)
+            ]
     elif endpoint == "pools":
         return _endpoint_data
+
+
+def load_inventory_file(file):
+    """Load local inventory file.
+
+    :return: list of dictionaries
+    """
+    if file.suffix not in (".yaml", ".yml"):
+        logger.warn(
+            f"Found invalid inventory file {file}. Inventory file must exist and "
+            "have a .yaml or .yml suffix."
+        )
+    else:
+        with file.open() as f:
+            return yaml.load(f, Loader=yaml.FullLoader) or []
+
+
+def update_inventory(inventory_data):
+    """Replace the existing inventory file with current subscription allocations."""
+    inventory_path = Path(settings.inventory_path)
+    if load_inventory_file(inventory_path):
+        inventory_path.unlink()
+    inventory_path.touch()
+    if inventory_data != []:
+        with inventory_path.open("w") as inventory_file:
+            yaml.dump(inventory_data, inventory_file, allow_unicode=True)
 
 
 def fake_http_response_code(good_codes=None, bad_codes=None, fail_rate=0):
