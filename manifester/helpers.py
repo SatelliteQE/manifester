@@ -86,13 +86,14 @@ def fetch_paginated_data(manifester, endpoint):
             manifester.requester.get,
             cmd_args=[f"{_endpoint_url}"],
             cmd_kwargs=data,
-        ).json()
+        )
         if _endpoint_data.status_code in [400, 401, 403, 404]:
             raise HTTPError(
                 f"Received HTTP {_endpoint_data.status_code} response code. Please "
                 "ensure that the request is a properly-formatted and authorized "
                 "request to a valid endpoint."
             )
+        _endpoint_data = _endpoint_data.json()
         if manifester.is_mock and endpoint == "pools":
             _endpoint_data = _endpoint_data.pool_response
         elif manifester.is_mock and endpoint == "allocations":
@@ -114,13 +115,14 @@ def fetch_paginated_data(manifester, endpoint):
                 manifester.requester.get,
                 cmd_args=[f"{_endpoint_url}"],
                 cmd_kwargs=data,
-            ).json()
+            )
             if offset_data.status_code in [400, 401, 403, 404]:
                 raise HTTPError(
                     f"Received HTTP {_endpoint_data.status_code} response code. Please "
                     "ensure that the request is a properly-formatted and authorized "
                     "request to a valid endpoint."
                 )
+            offset_data = offset_data.json()
             if manifester.is_mock and endpoint == "pools":
                 offset_data = offset_data.pool_response
             elif manifester.is_mock and endpoint == "allocations":
@@ -151,16 +153,14 @@ def load_inventory_file(file):
 
     :return: list of dictionaries
     """
-    if file.suffix in (".yaml", ".yml"):
-        loader = yaml
-        loader_args = {"Loader": yaml.FullLoader}
-        with file.open() as f:
-            return loader.load(f, **loader_args) or []
-    else:
+    if file.suffix not in (".yaml", ".yml"):
         logger.warn(
             f"Found invalid inventory file {file}. Inventory file must exist and "
             "have a .yaml or .yml suffix."
         )
+    else:
+        with file.open() as f:
+            return yaml.load(f, Loader=yaml.FullLoader) or []
 
 
 def update_inventory(inventory_data):
