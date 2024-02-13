@@ -135,7 +135,7 @@ def fetch_paginated_data(manifester, endpoint):
         if hasattr(_endpoint_data, "force_export_failure"):
             return [
                 a
-                for a in _endpoint_data.allocation_data["body"]
+                for a in _endpoint_data.allocations_response["body"]
                 if a["name"].startswith(manifester.username_prefix)
             ]
         else:

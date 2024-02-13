@@ -40,7 +40,7 @@ class Manifester:
 
             self.requester = requests
             self.is_mock = False
-        self.username_prefix = settings.username_prefix or self.manifest_data.username_prefix
+        self.username_prefix = self.manifest_data.username_prefix or settings.username_prefix
         self.allocation_name = allocation_name or f"{self.username_prefix}-" + "".join(
             random.sample(string.ascii_letters, 8)
         )
