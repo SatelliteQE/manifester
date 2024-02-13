@@ -1,10 +1,11 @@
 """Defines the CLI commands for Manifester."""
-import click
+from pathlib import Path
 
+import click
 from logzero import logger
+
 from manifester import Manifester, helpers
 from manifester.settings import settings
-from pathlib import Path
 
 
 # To do: add a command for returning subscription pools
@@ -32,8 +33,10 @@ def get_manifest(manifest_category, allocation_name):
         )
     manifester.trigger_manifest_export()
 
+
 @cli.command()
-@click.option('--details', is_flag=True, help='Display full inventory details')
+@click.option("--details", is_flag=True, help="Display full inventory details")
 def inventory(details):
-  logger.info("Displaying local inventory data")
-  click.echo(helpers.load_inventory_file(Path(settings.inventory_path)))
+    """Display the local inventory file's contents."""
+    logger.info("Displaying local inventory data")
+    click.echo(helpers.load_inventory_file(Path(settings.inventory_path)))

@@ -1,14 +1,19 @@
 from functools import cached_property
+from pathlib import Path
 import random
 import string
 import uuid
 
 import pytest
-from pathlib import Path
 from requests.exceptions import Timeout
 
 from manifester import Manifester
-from manifester.helpers import MockStub, fake_http_response_code, update_inventory, load_inventory_file
+from manifester.helpers import (
+    MockStub,
+    fake_http_response_code,
+    load_inventory_file,
+    update_inventory,
+)
 
 SUB_ALLOCATION_UUID = f"{uuid.uuid4().hex}"
 
@@ -73,10 +78,11 @@ SUB_ALLOCATIONS_RESPONSE = {
     "body": [
         {
             "uuid": f"{SUB_ALLOCATION_UUID}",
-            "name": f"{MANIFEST_DATA['username_prefix']}-" + "".join(random.sample(string.ascii_letters, 8)),
+            "name": f"{MANIFEST_DATA['username_prefix']}-"
+            + "".join(random.sample(string.ascii_letters, 8)),
             "type": "Satellite",
             "version": f"{MANIFEST_DATA['sat_version']}",
-            "entitlementQuantity": sum( d['quantity'] for d in MANIFEST_DATA['subscription_data'] ),
+            "entitlementQuantity": sum(d["quantity"] for d in MANIFEST_DATA["subscription_data"]),
             "url": f"{MANIFEST_DATA['url']['allocations']}/{SUB_ALLOCATION_UUID}",
             "simpleContentAccess": f"{MANIFEST_DATA['simple_content_access']}",
         }
@@ -182,7 +188,10 @@ class RhsmApiStub(MockStub):
 
     def delete(self, *args, **kwargs):
         """Simulate responses to DELETE requests for RHSM API endpoints used by Manifester."""
-        if args[0].endswith(f"allocations/{SUB_ALLOCATION_UUID}") and kwargs["params"]["force"] == "true":
+        if (
+            args[0].endswith(f"allocations/{SUB_ALLOCATION_UUID}")
+            and kwargs["params"]["force"] == "true"
+        ):
             del self.status_code
             self.content = b""
             self._good_codes = [204]
@@ -287,8 +296,12 @@ def test_invalid_sat_version():
     manifester = Manifester(manifest_category=MANIFEST_DATA, requester=RhsmApiStub(in_dict=None))
     assert manifester.sat_version == "sat-6.14"
 
+
 def test_update_inventory():
     """Test that inventory file is populated with expected contents after updating."""
     manifester = Manifester(manifest_category=MANIFEST_DATA, requester=RhsmApiStub(in_dict=None))
     update_inventory(manifester.subscription_allocations)
-    assert load_inventory_file(Path(MANIFEST_DATA["inventory_path"])) == SUB_ALLOCATIONS_RESPONSE["body"]
+    assert (
+        load_inventory_file(Path(MANIFEST_DATA["inventory_path"]))
+        == SUB_ALLOCATIONS_RESPONSE["body"]
+    )
