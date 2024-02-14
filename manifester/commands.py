@@ -38,5 +38,18 @@ def get_manifest(manifest_category, allocation_name):
 @click.option("--details", is_flag=True, help="Display full inventory details")
 def inventory(details):
     """Display the local inventory file's contents."""
-    logger.info("Displaying local inventory data")
-    click.echo(helpers.load_inventory_file(Path(settings.inventory_path)))
+    inv = helpers.load_inventory_file(Path(settings.inventory_path))
+    if not details:
+        logger.info("Displaying local inventory data")
+        click.echo("-" * 38)
+        click.echo(f"| {'Index'} | {'Allocation Name':<26} |")
+        click.echo("-" * 38)
+        for num, allocation in enumerate(inv):
+            click.echo(f"| {num:<5} | {allocation['name']:<26} |")
+            click.echo("-" * 38)
+    else:
+        logger.info("Displaying detailed local inventory data")
+        for num, allocation in enumerate(inv):
+            click.echo(f"{num}:")
+            for key, value in allocation.items():
+                click.echo(f"{'':<4}{key}: {value}")
