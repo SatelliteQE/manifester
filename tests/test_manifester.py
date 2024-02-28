@@ -79,7 +79,7 @@ SUB_ALLOCATIONS_RESPONSE = {
         {
             "uuid": SUB_ALLOCATION_UUID,
             "name": f"{MANIFEST_DATA['username_prefix']}-"
-            + "".join(random.choices(string.ascii_letters, 8)),
+            + "".join(random.choices(string.ascii_letters, k=8)),
             "type": "Satellite",
             "version": f"{MANIFEST_DATA['sat_version']}",
             "entitlementQuantity": sum(d["quantity"] for d in MANIFEST_DATA["subscription_data"]),
