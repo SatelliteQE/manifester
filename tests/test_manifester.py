@@ -77,9 +77,9 @@ SUB_POOL_RESPONSE = {
 SUB_ALLOCATIONS_RESPONSE = {
     "body": [
         {
-            "uuid": f"{SUB_ALLOCATION_UUID}",
+            "uuid": SUB_ALLOCATION_UUID,
             "name": f"{MANIFEST_DATA['username_prefix']}-"
-            + "".join(random.sample(string.ascii_letters, 8)),
+            + "".join(random.choices(string.ascii_letters, 8)),
             "type": "Satellite",
             "version": f"{MANIFEST_DATA['sat_version']}",
             "entitlementQuantity": sum(d["quantity"] for d in MANIFEST_DATA["subscription_data"]),
@@ -111,7 +111,7 @@ class RhsmApiStub(MockStub):
             self.access_token = "this is a simulated access token"
             return self
         if args[0].endswith("allocations"):
-            self.uuid = f"{SUB_ALLOCATION_UUID}"
+            self.uuid = SUB_ALLOCATION_UUID
             return self
         if args[0].endswith("entitlements"):
             self.params = kwargs["params"]
@@ -211,7 +211,7 @@ def test_create_allocation():
     """Test that manifester's create_subscription_allocation method returns a UUID."""
     manifester = Manifester(manifest_category=MANIFEST_DATA, requester=RhsmApiStub(in_dict=None))
     allocation_uuid = manifester.create_subscription_allocation()
-    assert allocation_uuid.uuid == f"{SUB_ALLOCATION_UUID}"
+    assert allocation_uuid.uuid == SUB_ALLOCATION_UUID
 
 
 def test_negative_simple_retry_timeout():
