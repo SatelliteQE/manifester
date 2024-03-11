@@ -18,21 +18,22 @@ def cli():
 
 @cli.command()
 @click.option(
-    "--manifest_category",
+    "--manifest-category",
     type=str,
     help="Category of manifest (golden_ticket or robottelo_automation by default)",
 )
-@click.option("--allocation_name", type=str, help="Name of upstream subscription allocation")
-def get_manifest(manifest_category, allocation_name):
+@click.option("--allocation-name", type=str, help="Name of upstream subscription allocation")
+@click.option("--requester", type=str, default=None)
+def get_manifest(manifest_category, allocation_name, requester):
     """Return a subscription manifester based on the settings for the provided manifest_category."""
-    manifester = Manifester(manifest_category, allocation_name, cli=True)
+    manifester = Manifester(manifest_category, allocation_name, requester=requester)
     manifester.create_subscription_allocation()
     for sub in manifester.subscription_data:
         manifester.process_subscription_pools(
             subscription_pools=manifester.subscription_pools,
             subscription_data=sub,
         )
-    manifester.trigger_manifest_export()
+    return manifester.trigger_manifest_export()
 
 
 @cli.command()
@@ -54,14 +55,14 @@ def delete(allocations, all_, remove_manifest_file):
     """Delete subscription allocations in inventory and optionally delete local manifest files."""
     inv = helpers.load_inventory_file(Path(settings.inventory_path))
     for num, allocation in enumerate(inv):
-        if remove_manifest_file:
-            Path(
-                f"{os.environ['MANIFESTER_DIRECTORY']}/manifests/{allocation.get('name')}_manifest.zip"
-            ).unlink()
         if str(num) in allocations or allocation.get("name") in allocations or all_:
             Manifester(minimal_init=True).delete_subscription_allocation(
                 uuid=allocation.get("uuid")
             )
+            if remove_manifest_file:
+                Path(
+                    f"{os.environ['MANIFESTER_DIRECTORY']}/manifests/{allocation.get('name')}_manifest.zip"
+                ).unlink()
 
 
 @cli.command()

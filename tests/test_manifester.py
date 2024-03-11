@@ -305,3 +305,27 @@ def test_update_inventory():
         load_inventory_file(Path(MANIFEST_DATA["inventory_path"]))
         == SUB_ALLOCATIONS_RESPONSE["body"]
     )
+
+
+# CLI test case is currently manual
+
+
+def test_cli_end_to_end():
+    """Test that manifester's get-manifest cli command returns a manifest.
+
+    Steps to test:
+    1. Generate a new manifest with 'manifester get-manifest --manifest-category golden_ticket`
+    2. Generate three additional manifests using the same command as step 1
+    3. Verify that the four manifest file are present in the `./manifests/` directory
+    4. Verify that the manifests contain the expected subscriptions with `rct cat-manifest
+       <manifest file>`
+    5. Verify that all four manifests are present in the local inventory with `manifester inventory`
+    6. Verify that a subscription allocation can be deleted by inventory index with `manifester
+       delete 0`
+    7. Verify that a subscription allocation can be deleted by name with `manifester delete
+       <allocation name>`
+    8. Verify that all remaining allocations can be deleted and that the corresponding manifest
+       files can be deleted as well with `manifester delete --all --remove-manifest-file`
+    9. Run `manifester inventory --sync` and verify that none of the allocations created above
+       are present in the inventory
+    """
