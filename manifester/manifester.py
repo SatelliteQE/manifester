@@ -20,51 +20,81 @@ from manifester.helpers import (
 )
 from manifester.settings import settings
 
-MAX_RESULTS_PER_PAGE = 50
-RESULTS_LIMIT = 10000
-
 
 class Manifester:
     """Main Manifester class responsible for generating a manifest from the provided settings."""
 
-    def __init__(self, manifest_category, allocation_name=None, **kwargs):
-        if isinstance(manifest_category, dict):
-            self.manifest_data = DynaBox(manifest_category)
-        else:
-            self.manifest_data = settings.manifest_category.get(manifest_category)
-        if kwargs.get("requester") is not None:
-            self.requester = kwargs["requester"]
-            self.is_mock = True
-        else:
-            import requests
+    def __init__(
+        self,
+        manifest_category=None,
+        allocation_name=None,
+        minimal_init=False,
+        proxies=None,
+        **kwargs,
+    ):
+        if minimal_init:
+            self.offline_token = settings.get("offline_token")
+            self.token_request_url = settings.get("url").get("token_request")
+            self.allocations_url = settings.get("url").get("allocations")
+            self._access_token = None
+            self._allocations = None
+            self.token_request_data = {
+                "grant_type": "refresh_token",
+                "client_id": "rhsm-api",
+                "refresh_token": self.offline_token,
+            }
+            self.manifest_data = {"proxies": proxies}
+            self.username_prefix = settings.get("username_prefix")
+            if kwargs.get("requester") is not None:
+                self.requester = kwargs["requester"]
+                self.is_mock = True
+            else:
+                import requests
 
-            self.requester = requests
-            self.is_mock = False
-        self.username_prefix = settings.username_prefix or self.manifest_data.username_prefix
-        self.allocation_name = allocation_name or f"{self.username_prefix}-" + "".join(
-            random.sample(string.ascii_letters, 8)
-        )
-        self.manifest_name = Path(f"{self.allocation_name}_manifest.zip")
-        self.offline_token = kwargs.get("offline_token", self.manifest_data.offline_token)
-        self.subscription_data = self.manifest_data.subscription_data
-        self.token_request_data = {
-            "grant_type": "refresh_token",
-            "client_id": "rhsm-api",
-            "refresh_token": self.offline_token,
-        }
-        self.simple_content_access = kwargs.get(
-            "simple_content_access", self.manifest_data.simple_content_access
-        )
-        self.token_request_url = self.manifest_data.get("url").get("token_request")
-        self.allocations_url = self.manifest_data.get("url").get("allocations")
-        self._access_token = None
-        self._allocations = None
-        self._subscription_pools = None
-        self._active_pools = []
-        self.sat_version = process_sat_version(
-            kwargs.get("sat_version", self.manifest_data.sat_version),
-            self.valid_sat_versions,
-        )
+                self.requester = requests
+                self.is_mock = False
+        else:
+            if isinstance(manifest_category, dict):
+                self.manifest_data = DynaBox(manifest_category)
+            else:
+                self.manifest_data = settings.manifest_category.get(manifest_category)
+            if kwargs.get("requester") is not None:
+                self.requester = kwargs["requester"]
+                self.is_mock = True
+            else:
+                import requests
+
+                self.requester = requests
+                self.is_mock = False
+            self.username_prefix = (
+                self.manifest_data.get("username_prefix") or settings.username_prefix
+            )
+            self.allocation_name = allocation_name or f"{self.username_prefix}-" + "".join(
+                random.sample(string.ascii_letters, 8)
+            )
+            self.manifest_name = Path(f"{self.allocation_name}_manifest.zip")
+            self.offline_token = self.manifest_data.get(
+                "offline_token", settings.get("offline_token")
+            )
+            self.subscription_data = self.manifest_data.subscription_data
+            self.token_request_data = {
+                "grant_type": "refresh_token",
+                "client_id": "rhsm-api",
+                "refresh_token": self.offline_token,
+            }
+            self.simple_content_access = kwargs.get(
+                "simple_content_access", self.manifest_data.simple_content_access
+            )
+            self.token_request_url = self.manifest_data.get("url").get("token_request")
+            self.allocations_url = self.manifest_data.get("url").get("allocations")
+            self._access_token = None
+            self._allocations = None
+            self._subscription_pools = None
+            self._active_pools = []
+            self.sat_version = process_sat_version(
+                kwargs.get("sat_version", self.manifest_data.sat_version),
+                self.valid_sat_versions,
+            )
 
     @property
     def access_token(self):
@@ -113,7 +143,7 @@ class Manifester:
 
     @property
     def subscription_pools(self):
-        """Reprentation of subscription pools in an account."""
+        """Representation of subscription pools in an account."""
         return fetch_paginated_data(self, "pools")
 
     def create_subscription_allocation(self):
@@ -151,7 +181,7 @@ class Manifester:
         update_inventory(self.subscription_allocations)
         return self.allocation_uuid
 
-    def delete_subscription_allocation(self):
+    def delete_subscription_allocation(self, uuid=None):
         """Deletes the specified subscription allocation and returns the RHSM API's response."""
         self._access_token = None
         data = {
@@ -163,9 +193,10 @@ class Manifester:
             self.allocation_uuid = self.allocation_uuid.uuid
         response = simple_retry(
             self.requester.delete,
-            cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
+            cmd_args=[f"{self.allocations_url}/{uuid if uuid else self.allocation_uuid}"],
             cmd_kwargs=data,
         )
+        update_inventory(self.subscription_allocations)
         return response
 
     def add_entitlements_to_allocation(self, pool_id, entitlement_quantity):
@@ -367,6 +398,7 @@ class Manifester:
         local_file.write_bytes(manifest.content)
         manifest.path = local_file
         manifest.name = self.manifest_name
+        update_inventory(self.subscription_allocations)
         return manifest
 
     def get_manifest(self):
@@ -392,6 +424,6 @@ class Manifester:
             raise
 
     def __exit__(self, *tb_args):
-        """Deletes subscription allocation on teardown."""
+        """Deletes subscription allocation on teardown unless using CLI."""
         self.delete_subscription_allocation()
         update_inventory(self.subscription_allocations)

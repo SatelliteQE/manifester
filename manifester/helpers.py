@@ -10,7 +10,6 @@ import yaml
 
 from manifester.settings import settings
 
-MAX_RESULTS_PER_PAGE = 50
 RESULTS_LIMIT = 10000
 
 
@@ -64,9 +63,11 @@ def fetch_paginated_data(manifester, endpoint):
     if endpoint == "allocations":
         _endpoint_url = manifester.allocations_url
         _endpoint_data = manifester._allocations
+        MAX_RESULTS_PER_PAGE = 100
     elif endpoint == "pools":
         _endpoint_url = f"{manifester.allocations_url}/{manifester.allocation_uuid}/pools"
         _endpoint_data = manifester._subscription_pools
+        MAX_RESULTS_PER_PAGE = 50
     else:
         raise ValueError(
             f"Received value {endpoint} for endpoint argument. Valid values "
@@ -104,7 +105,7 @@ def fetch_paginated_data(manifester, endpoint):
         # around this limit by repeating calls with a progressively larger value for the `offset`
         # parameter.
         while _results == MAX_RESULTS_PER_PAGE:
-            _offset += 50
+            _offset += MAX_RESULTS_PER_PAGE
             logger.debug(f"Fetching additional data with an offset of {_offset}.")
             data = {
                 "headers": {"Authorization": f"Bearer {manifester.access_token}"},
@@ -135,7 +136,7 @@ def fetch_paginated_data(manifester, endpoint):
         if hasattr(_endpoint_data, "force_export_failure"):
             return [
                 a
-                for a in _endpoint_data.allocation_data["body"]
+                for a in _endpoint_data.allocations_response["body"]
                 if a["name"].startswith(manifester.username_prefix)
             ]
         else:
