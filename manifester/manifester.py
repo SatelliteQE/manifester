@@ -18,7 +18,10 @@ from manifester.helpers import (
     simple_retry,
     update_inventory,
 )
+from manifester.logger import setup_logzero
 from manifester.settings import settings
+
+setup_logzero(level=settings.get("log_level", "info"))
 
 
 class Manifester:
