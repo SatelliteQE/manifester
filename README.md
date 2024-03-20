@@ -28,8 +28,35 @@ The value of the `name` setting for each subscription in a manifest must exactly
 
 # CLI Usage
 
-Currently, the only action supported by the manifester CLI is generating a manifest using the `get-manifest` subcommand:
+Currently, the manifester CLI supports three subcommands: `get-manifest`, `delete`, and `inventory`.
+
+The `get-manifest` subcommand is used to generate a manifest that is saved to the `./manifests` directory. Two options are supported for this command. `--manifest-category` is required, and the value passed to it **must** be defined as a manifest category in the `manifester_settings.yaml` configuration file. The `--allocation-name` option is optional and can be used to specify the name of the subscription allocation in RHSM, which will subsequently form part of the generated manifest's filename. If novalue is supplied for `--allocation_name`, a string of 10 random alphabetic characters will be joined to the value of the `username_prefix` setting in `manifester_settings.yaml`. A third option, `--requester`, is intended for future integration with Manifester's unit tests but is not currently supported. Example usage:
 ```
-manifester get-manifest --manifest-category <manifest category name> --allocation_name <allocation name>
+$ manifester get-manifest --manifest-category <manifest category name> --allocation-name <allocation name>
 ```
- Two options are available for this subcommand. The `--manifest_category` option is required and must match one of the manifest categories defined in `manifester_settings.yaml`. The `--allocation_name` option specifies the name of the subscription allocation in RHSM and is also used in the file name of the manifest archive exported by Manifester. If no value is supplied for `--allocation_name`, a string of 10 random alphabetic characters will be used for the allocation name.
+The `inventory` subcommand is used to display the contents of the local inventory file, the location of which is specified by the `inventory_path` setting in `manifester_settings.yaml`. Executing `manifester inventory` without options will write a a table to standard output that contains the name of each subscription allocation created by the user and an inventory index number for each allocation. Passing the `--details` option will print additional details about the allocation returned by the RHSM API. Passing the `--sync` option will update the inventory from the RHSM API before printing the inventory. **NOTE:** The inventory is generated based on the subscription allocations in the RHSM account with names beginning with the `username_prefix` defined in `manifester_settings.yaml`. Maintaining a unique and consistent `username_prefix` (such as the user's RHSM account username) is therefore crucial to accurate inventory management. Example usage and output:
+```
+$ manifester inventory
+[I 240320 14:52:02 commands:78] Displaying local inventory data
+--------------------------------------
+| Index | Allocation Name            |
+--------------------------------------
+| 0     | user-mBIojPMF              |
+--------------------------------------
+$ manifester inventory --details
+[I 240320 14:52:42 commands:86] Displaying detailed local inventory data
+0:
+    entitlementQuantity: 4
+    name: user-mBIojPMF
+    simpleContentAccess: enabled
+    type: Satellite
+    url: https://api.access.redhat.com/management/v1/allocations/2ea75142-8ea4-46db-87e3-1feab8613000
+    uuid: 2ef73132-83a4-473b-97e3-1feab8623000
+    version: 6.14
+```
+The `delete` subcommand will delete subscription allocations in the inventory from RHSM and, optionally, the local manifest file associated with those allocations. The `delete` subcommand will accept either a list of inventory index numbers or a list of subscription allocation names. Alternatively, the `--all` option will delete all subscription allocations in the inventory. Passing the `--remove-manifest-file` option will cause the CLI to delete the manifest files of any deleted subscription allocations from the local file system in addition to deleting the subscription allocation in RHSM. Example usage:
+```
+$ manifester delete 0 1 2
+$ manifester delete user-mBIojPMF
+$ manifester delete --all
+```
