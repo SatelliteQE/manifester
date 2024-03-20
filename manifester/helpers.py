@@ -154,6 +154,8 @@ def load_inventory_file(file):
 
     :return: list of dictionaries
     """
+    if not file.is_file():
+        file.touch()
     if file.suffix not in (".yaml", ".yml"):
         logger.warn(
             f"Found invalid inventory file {file}. Inventory file must exist and "
