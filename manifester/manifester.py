@@ -401,6 +401,10 @@ class Manifester:
         local_file.write_bytes(manifest.content)
         manifest.path = local_file
         manifest.name = self.manifest_name
+        if self.is_mock:
+            manifest.uuid = self.allocation_uuid.uuid
+        else:
+            manifest.uuid = self.allocation_uuid
         update_inventory(self.subscription_allocations)
         return manifest
 
