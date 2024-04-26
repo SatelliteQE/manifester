@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
     "click",
-    "dynaconf",
+    "dynaconf[vault]",
     "logzero",
     "pytest",
     "pyyaml",
@@ -156,6 +156,7 @@ ignore = [
     "D407", # Section name underlining
     "E731", # do not assign a lambda expression, use a def
     "PLR0913", # Too many arguments to function call ({c_args} > {max_args})
+    "PLW1510", # subprocess.run without an explict `check` argument
     "RUF012", # Mutable class attributes should be annotated with typing.ClassVar
     "D107", # Missing docstring in __init__
 ]
