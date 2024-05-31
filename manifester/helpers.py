@@ -347,7 +347,7 @@ class Vault:
 
     def logout(self):
         """Revoke Vault auth token and remove it from .env file."""
-        # Teardown - Setting dymmy token in env file
+        # Teardown - Setting dummy token in env file
         _envdata = re.sub(
             ".*VAULT_TOKEN_FOR_DYNACONF=.*", "# VAULT_TOKEN_FOR_DYNACONF=myroot", self.envdata
         )

@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-# This Enables and Disables individuals OIDC token to access secrets from vault
+"""Enables and Disables an OIDC token to access secrets from HashiCorp Vault."""
 import sys
 
 from manifester.helpers import Vault
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with Vault() as vclient:
-        if sys.argv[-1] == '--login':
+        if sys.argv[-1] == "--login":
             vclient.login()
-        elif sys.argv[-1] == '--status':
+        elif sys.argv[-1] == "--status":
             vclient.status()
         else:
             vclient.logout()

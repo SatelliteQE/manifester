@@ -61,7 +61,7 @@ def delete(allocations, all_, remove_manifest_file):
             )
             if remove_manifest_file:
                 manifester_directory = (
-                    Path(os.environ["MANIFESTER_DIRECTORY"])
+                    Path(os.environ["MANIFESTER_DIRECTORY"]).resolve()
                     if "MANIFESTER_DIRECTORY" in os.environ
                     else Path()
                 )

@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-from dynaconf import LazySettings, Validator
+from dynaconf import Dynaconf, Validator
 
 settings_file = "manifester_settings.yaml"
 MANIFESTER_DIRECTORY = Path()
@@ -18,10 +18,10 @@ validators = [
     Validator("simple_content_access", default="enabled"),
     Validator("username_prefix", len_min=3),
 ]
-settings = LazySettings(
+settings = Dynaconf(
     settings_file=str(settings_path.absolute()),
     ENVVAR_PREFIX_FOR_DYNACONF="MANIFESTER",
     load_dotenv=True,
     validators=validators,
 )
-settings.validators.validate()
+# settings.validators.validate()
