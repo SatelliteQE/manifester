@@ -1,14 +1,23 @@
 """Defines helper functions used by Manifester."""
 from collections import UserDict
+import json
+import os
 from pathlib import Path
 import random
+import re
+import subprocess
+import sys
 import time
 
 from logzero import logger
 from requests import HTTPError
 import yaml
 
+from manifester.logger import setup_logzero
 from manifester.settings import settings
+
+setup_logzero(level="info")
+
 
 RESULTS_LIMIT = 10000
 
@@ -226,3 +235,139 @@ class MockStub(UserDict):
     def __call__(self, *args, **kwargs):
         """Allow MockStub to be used like a function."""
         return self
+
+
+class InvalidVaultURLForOIDC(Exception):
+    """Raised if the vault doesn't allow OIDC login."""
+
+
+class Vault:
+    """Helper class for retrieving secrets from HashiCorp Vault."""
+
+    HELP_TEXT = (
+        "The Vault CLI in not installed on this system."
+        "Please follow https://learn.hashicorp.com/tutorials/vault/getting-started-install to "
+        "install the Vault CLI."
+    )
+
+    def __init__(self, env_file=".env"):
+        manifester_directory = Path()
+
+        if "MANIFESTER_DIRECTORY" in os.environ:
+            envar_location = Path(os.environ["MANIFESTER_DIRECTORY"])
+            if envar_location.is_dir():
+                manifester_directory = envar_location
+        self.env_path = manifester_directory.joinpath(env_file)
+        self.envdata = None
+        self.vault_enabled = None
+
+    def setup(self):
+        """Read environment variables from .env."""
+        if self.env_path.exists():
+            self.envdata = self.env_path.read_text()
+            is_enabled = re.findall("^(?:.*\n)*VAULT_ENABLED_FOR_DYNACONF=(.*)", self.envdata)
+            if is_enabled:
+                self.vault_enabled = is_enabled[0]
+            self.export_vault_addr()
+
+    def teardown(self):
+        """Remove VAULT_ADDR environment variable if present."""
+        if os.environ.get("VAULT_ADDR") is not None:
+            del os.environ["VAULT_ADDR"]
+
+    def export_vault_addr(self):
+        """Set the URL of the Vault server and ensure that the URL is not localhost."""
+        vaulturl = re.findall("VAULT_URL_FOR_DYNACONF=(.*)", self.envdata)[0]
+
+        # Set Vault CLI Env Var
+        os.environ["VAULT_ADDR"] = vaulturl
+
+        # Dynaconf Vault Env Vars
+        if (
+            self.vault_enabled
+            and self.vault_enabled in ["True", "true"]
+            and "localhost:8200" in vaulturl
+        ):
+            raise InvalidVaultURLForOIDC(
+                f"{vaulturl} does not support OIDC login."
+                "Please set the correct vault URL vault the .env file."
+            )
+
+    def exec_vault_command(self, command: str, **kwargs):
+        """Wrap Vault CLI commands for execution.
+
+        :param comamnd str: The vault CLI command
+        :param kwargs dict: Arguments to the subprocess run command to customize the run behavior
+        """
+        COMMAND_NOT_FOUND_EXIT_CODE = 127
+        vcommand = subprocess.run(command.split(), capture_output=True, **kwargs)
+        if vcommand.returncode != 0:
+            verror = str(vcommand.stderr)
+            if vcommand.returncode == COMMAND_NOT_FOUND_EXIT_CODE:
+                logger.error(f"Error! {self.HELP_TEXT}")
+                sys.exit(1)
+            if vcommand.stderr:
+                if "Error revoking token" in verror:
+                    logger.info("Token is already revoked")
+                elif "Error looking up token" in verror:
+                    logger.info("Vault is not logged in")
+                else:
+                    logger.error(f"Error: {verror}")
+        return vcommand
+
+    def login(self, **kwargs):
+        """Authenticate to Vault server and add auth token to .env file."""
+        if (
+            self.vault_enabled
+            and self.vault_enabled in ["True", "true"]
+            and "VAULT_SECRET_ID_FOR_DYNACONF" not in os.environ
+            and self.status(**kwargs).returncode != 0
+        ):
+            logger.info(
+                "Warning: A browser tab will open for Vault OIDC login. "
+                "Please close the tab once the sign-in is complete"
+            )
+            if (
+                self.exec_vault_command(command="vault login -method=oidc", **kwargs).returncode
+                == 0
+            ):
+                self.exec_vault_command(command="vault token renew -i 10h", **kwargs)
+                logger.info("Success! Vault OIDC Logged-In and extended for 10 hours!")
+            # Fetch token
+            token = self.exec_vault_command("vault token lookup --format json").stdout
+            token = json.loads(str(token.decode("UTF-8")))["data"]["id"]
+            # Set new token in .env file
+            _envdata = re.sub(
+                ".*VAULT_TOKEN_FOR_DYNACONF=.*",
+                f"VAULT_TOKEN_FOR_DYNACONF={token}",
+                self.envdata,
+            )
+            self.env_path.write_text(_envdata)
+            logger.info("New OIDC token succesfully added to .env file")
+
+    def logout(self):
+        """Revoke Vault auth token and remove it from .env file."""
+        # Teardown - Setting dummy token in env file
+        _envdata = re.sub(
+            ".*VAULT_TOKEN_FOR_DYNACONF=.*", "# VAULT_TOKEN_FOR_DYNACONF=myroot", self.envdata
+        )
+        self.env_path.write_text(_envdata)
+        vstatus = self.exec_vault_command("vault token revoke -self")
+        if vstatus.returncode == 0:
+            logger.info("OIDC token successfully removed from .env file")
+
+    def status(self, **kwargs):
+        """Check status of Vault auth token."""
+        vstatus = self.exec_vault_command("vault token lookup", **kwargs)
+        if vstatus.returncode == 0:
+            logger.info(str(vstatus.stdout.decode("UTF-8")))
+        return vstatus
+
+    def __enter__(self):
+        """Set up Vault context manager."""
+        self.setup()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Tear down Vault context manager."""
+        self.teardown()

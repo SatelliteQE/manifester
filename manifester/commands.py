@@ -60,8 +60,13 @@ def delete(allocations, all_, remove_manifest_file):
                 uuid=allocation.get("uuid")
             )
             if remove_manifest_file:
+                manifester_directory = (
+                    Path(os.environ["MANIFESTER_DIRECTORY"]).resolve()
+                    if "MANIFESTER_DIRECTORY" in os.environ
+                    else Path()
+                )
                 Path(
-                    f"{os.environ['MANIFESTER_DIRECTORY']}/manifests/{allocation.get('name')}_manifest.zip"
+                    f"{manifester_directory}/manifests/{allocation.get('name')}_manifest.zip"
                 ).unlink()
 
 

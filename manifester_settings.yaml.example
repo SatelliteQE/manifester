@@ -1,15 +1,18 @@
 #rhsm-manifester settings
+inventory_path: "manifester_inventory.yaml"
 log_level: "info"
 offline_token: ""
 proxies: {"https": ""}
+url:
+  token_request: "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
+  allocations: "https://api.access.redhat.com/management/v1/allocations"
 username_prefix: "example_username"  # replace value with a unique username
-inventory_path: "manifester_inventory.yaml"
 manifest_category:
   golden_ticket:
     # An offline token can be generated at https://access.redhat.com/management/api
     offline_token: ""
-    # Value of sat_version setting should be in the form 'sat-6.10'
-    sat_version: "sat-6.10"
+    # Value of sat_version setting should be in the form 'sat-6.14'
+    sat_version: "sat-6.14"
     # golden_ticket manifests should not use a quantity higher than 1 for any subscription
     # unless doing so is required for a test.
     subscription_data:
@@ -25,7 +28,7 @@ manifest_category:
     proxies: {"https": ""}
   robottelo_automation:
     offline_token: ""
-    sat_version: "sat-6.10"
+    sat_version: "sat-6.14"
     subscription_data:
       - name: "Software Collections and Developer Toolset"
         quantity: 3

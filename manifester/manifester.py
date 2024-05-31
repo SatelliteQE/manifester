@@ -21,8 +21,6 @@ from manifester.helpers import (
 from manifester.logger import setup_logzero
 from manifester.settings import settings
 
-setup_logzero(level=settings.get("log_level", "info"))
-
 
 class Manifester:
     """Main Manifester class responsible for generating a manifest from the provided settings."""
@@ -35,6 +33,7 @@ class Manifester:
         proxies=None,
         **kwargs,
     ):
+        setup_logzero(level=settings.get("log_level", "info"))
         if minimal_init:
             self.offline_token = settings.get("offline_token")
             self.token_request_url = settings.get("url").get("token_request")

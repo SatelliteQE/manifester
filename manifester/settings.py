@@ -14,14 +14,14 @@ if "MANIFESTER_DIRECTORY" in os.environ:
 
 settings_path = MANIFESTER_DIRECTORY.joinpath("manifester_settings.yaml")
 validators = [
-    # Validator("offline_token", must_exist=True),
+    Validator("offline_token", must_exist=True),
     Validator("simple_content_access", default="enabled"),
     Validator("username_prefix", len_min=3),
 ]
 settings = Dynaconf(
     settings_file=str(settings_path.absolute()),
     ENVVAR_PREFIX_FOR_DYNACONF="MANIFESTER",
+    load_dotenv=True,
     validators=validators,
 )
-
-settings.validators.validate()
+# settings.validators.validate()
