@@ -44,4 +44,5 @@ jobs:
         pip install -U pip
         pip install -U .[test]
         cp manifester_settings.yaml.example manifester_settings.yaml
+        manifester --help
         pytest -v tests/
