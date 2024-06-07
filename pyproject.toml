@@ -63,6 +63,9 @@ setup = [
     "twine",
 ]
 
+[project.scripts]
+manifester = "manifester.commands:cli"
+
 [tools.setuptools]
 platforms = ["any"]
 zip-safe = false
