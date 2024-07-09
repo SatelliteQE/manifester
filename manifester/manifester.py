@@ -339,7 +339,7 @@ class Manifester:
         Starts the export job, monitors the status of the job, and downloads the manifest on
         successful completion of the job.
         """
-        MAX_REQUESTS = 50
+        MAX_REQUESTS = 500
         SUCCESS_CODE = 200
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
