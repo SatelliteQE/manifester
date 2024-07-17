@@ -9,7 +9,6 @@ import random
 import string
 
 from dynaconf.utils.boxing import DynaBox
-from logzero import logger
 from requests.exceptions import Timeout
 
 from manifester.helpers import (
@@ -18,7 +17,7 @@ from manifester.helpers import (
     simple_retry,
     update_inventory,
 )
-from manifester.logger import setup_logzero
+from manifester.logger import _logger as logger
 from manifester.settings import settings
 
 
@@ -33,7 +32,6 @@ class Manifester:
         proxies=None,
         **kwargs,
     ):
-        setup_logzero(level=settings.get("log_level", "info"))
         if minimal_init:
             self.offline_token = settings.get("offline_token")
             self.token_request_url = settings.get("url").get("token_request")
