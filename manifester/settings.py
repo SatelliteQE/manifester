@@ -1,18 +1,9 @@
 """Retrieves settings from configuration file and runs Dynaconf validators."""
-import os
-from pathlib import Path
 
 from dynaconf import Dynaconf, Validator
 
-settings_file = "manifester_settings.yaml"
-MANIFESTER_DIRECTORY = Path()
+from manifester._settings import settings_path
 
-if "MANIFESTER_DIRECTORY" in os.environ:
-    envar_location = Path(os.environ["MANIFESTER_DIRECTORY"])
-    if envar_location.is_dir():
-        MANIFESTER_DIRECTORY = envar_location
-
-settings_path = MANIFESTER_DIRECTORY.joinpath("manifester_settings.yaml")
 validators = [
     Validator("offline_token", must_exist=True),
     Validator("simple_content_access", default="enabled"),

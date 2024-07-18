@@ -9,15 +9,11 @@ import subprocess
 import sys
 import time
 
-from logzero import logger
 from requests import HTTPError
 import yaml
 
-from manifester.logger import setup_logzero
+from manifester.logger import _logger as logger
 from manifester.settings import settings
-
-setup_logzero(level="info")
-
 
 RESULTS_LIMIT = 10000
 

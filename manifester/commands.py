@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 
 import click
-from logzero import logger
 
 from manifester import Manifester, helpers
+from manifester.logger import _logger as logger
 from manifester.settings import settings
 
 
