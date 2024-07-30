@@ -33,7 +33,10 @@ class Manifester:
         **kwargs,
     ):
         if minimal_init:
-            self.offline_token = settings.get("offline_token")
+            if kwargs.get("offline_token") is not None:
+                self.offline_token = kwargs.get("offline_token")
+            else:
+                self.offline_token = settings.get("offline_token")
             self.token_request_url = settings.get("url").get("token_request")
             self.allocations_url = settings.get("url").get("allocations")
             self._access_token = None
