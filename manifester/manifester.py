@@ -9,7 +9,7 @@ import random
 import string
 
 from dynaconf.utils.boxing import DynaBox
-from requests.exceptions import Timeout
+from requests.exceptions import RequestException, Timeout
 
 from manifester.helpers import (
     fetch_paginated_data,
@@ -35,8 +35,10 @@ class Manifester:
         if minimal_init:
             if kwargs.get("offline_token") is not None:
                 self.offline_token = kwargs.get("offline_token")
-            else:
+            elif settings.get("offline_token") is not None:
                 self.offline_token = settings.get("offline_token")
+            else:
+                raise KeyError("Offline token not defined.")
             self.token_request_url = settings.get("url").get("token_request")
             self.allocations_url = settings.get("url").get("allocations")
             self._access_token = None
@@ -113,6 +115,8 @@ class Manifester:
                 cmd_args=[f"{self.token_request_url}"],
                 cmd_kwargs=token_request_data,
             ).json()
+            if "error" in token_data:
+                raise RequestException(f"{token_data['error']}: {token_data['error_description']}")
             if self.is_mock:
                 self._access_token = token_data.access_token
             else:
