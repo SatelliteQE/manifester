@@ -73,11 +73,12 @@ def delete(allocations, all_, remove_manifest_file):
 @cli.command()
 @click.option("--details", is_flag=True, help="Display full inventory details")
 @click.option("--sync", is_flag=True, help="Fetch inventory data from RHSM before displaying")
-def inventory(details, sync):
+@click.option("--offline-token", type=str, default=None)
+def inventory(details, sync, offline_token):
     """Display the local inventory file's contents."""
     border = "-" * 38
     if sync:
-        helpers.update_inventory(Manifester(minimal_init=True).subscription_allocations)
+        helpers.update_inventory(Manifester(minimal_init=True, offline_token=offline_token).subscription_allocations)
     inv = helpers.load_inventory_file(Path(settings.inventory_path))
     if not details:
         logger.info("Displaying local inventory data")
