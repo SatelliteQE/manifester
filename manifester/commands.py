@@ -51,14 +51,15 @@ def get_manifest(manifest_category, allocation_name, requester):
     default=False,
     help="Delete local manifest files in addition to upstream subscription allocations",
 )
-def delete(allocations, all_, remove_manifest_file):
+@click.option("--offline-token", type=str, default=None)
+def delete(allocations, all_, remove_manifest_file, offline_token):
     """Delete subscription allocations in inventory and optionally delete local manifest files."""
     inv = helpers.load_inventory_file(Path(settings.inventory_path))
     for num, allocation in enumerate(inv):
         if str(num) in allocations or allocation.get("name") in allocations or all_:
-            Manifester(minimal_init=True).delete_subscription_allocation(
-                uuid=allocation.get("uuid")
-            )
+            Manifester(
+                minimal_init=True, offline_token=offline_token
+            ).delete_subscription_allocation(uuid=allocation.get("uuid"))
             if remove_manifest_file:
                 manifester_directory = (
                     Path(os.environ["MANIFESTER_DIRECTORY"]).resolve()
@@ -78,7 +79,9 @@ def inventory(details, sync, offline_token):
     """Display the local inventory file's contents."""
     border = "-" * 38
     if sync:
-        helpers.update_inventory(Manifester(minimal_init=True, offline_token=offline_token).subscription_allocations)
+        helpers.update_inventory(
+            Manifester(minimal_init=True, offline_token=offline_token).subscription_allocations
+        )
     inv = helpers.load_inventory_file(Path(settings.inventory_path))
     if not details:
         logger.info("Displaying local inventory data")
