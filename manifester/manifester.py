@@ -185,7 +185,7 @@ class Manifester:
             f"Subscription allocation created with name {self.allocation_name} "
             f"and UUID {self.allocation_uuid}"
         )
-        update_inventory(self.subscription_allocations)
+        update_inventory(self.subscription_allocations, uuid=self.allocation_uuid)
         return self.allocation_uuid
 
     def delete_subscription_allocation(self, uuid=None):
@@ -203,7 +203,9 @@ class Manifester:
             cmd_args=[f"{self.allocations_url}/{uuid if uuid else self.allocation_uuid}"],
             cmd_kwargs=data,
         )
-        update_inventory(self.subscription_allocations)
+        update_inventory(
+            self.subscription_allocations, remove=True, uuid=uuid if uuid else self.allocation_uuid
+        )
         return response
 
     def add_entitlements_to_allocation(self, pool_id, entitlement_quantity):
@@ -322,7 +324,7 @@ class Manifester:
                             f"{subscription_data['name']} to the allocation."
                         )
                         self._active_pools.append(match)
-                        update_inventory(self.subscription_allocations)
+                        update_inventory(self.subscription_allocations, uuid=self.allocation_uuid)
                         break
                 elif add_entitlements.status_code == SUCCESS_CODE:
                     logger.debug(
@@ -330,7 +332,7 @@ class Manifester:
                         f"{subscription_data['name']} to the allocation."
                     )
                     self._active_pools.append(match)
-                    update_inventory(self.subscription_allocations)
+                    update_inventory(self.subscription_allocations, uuid=self.allocation_uuid)
                     break
                 else:
                     raise RuntimeError(
@@ -409,7 +411,7 @@ class Manifester:
             manifest.uuid = self.allocation_uuid.uuid
         else:
             manifest.uuid = self.allocation_uuid
-        update_inventory(self.subscription_allocations)
+        update_inventory(self.subscription_allocations, uuid=self.allocation_uuid)
         return manifest
 
     def get_manifest(self):
@@ -437,4 +439,3 @@ class Manifester:
     def __exit__(self, *tb_args):
         """Deletes subscription allocation on teardown unless using CLI."""
         self.delete_subscription_allocation()
-        update_inventory(self.subscription_allocations)

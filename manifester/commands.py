@@ -80,7 +80,8 @@ def inventory(details, sync, offline_token):
     border = "-" * 38
     if sync:
         helpers.update_inventory(
-            Manifester(minimal_init=True, offline_token=offline_token).subscription_allocations
+            Manifester(minimal_init=True, offline_token=offline_token).subscription_allocations,
+            sync=True,
         )
     inv = helpers.load_inventory_file(Path(settings.inventory_path))
     if not details:

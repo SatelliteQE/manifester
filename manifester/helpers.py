@@ -171,15 +171,43 @@ def load_inventory_file(file):
             return yaml.load(f, Loader=yaml.FullLoader) or []
 
 
-def update_inventory(inventory_data):
+def _dump_inventory_file(inventory_path, inventory):
+    """Write inventory data to local inventory file."""
+    with inventory_path.open("w") as inventory_file:
+        yaml.dump(inventory, inventory_file, allow_unicode=True)
+
+
+def _update_inventory(inventory_path, inventory, allocation):
+    """Add new allocation, remove and recreate inventory file."""
+    inventory.append(allocation)
+    inventory_path.unlink()
+    inventory_path.touch()
+    _dump_inventory_file(inventory_path, inventory)
+
+
+def update_inventory(inventory_data, sync=False, remove=False, uuid=None):
     """Replace the existing inventory file with current subscription allocations."""
     inventory_path = Path(settings.inventory_path)
-    if load_inventory_file(inventory_path):
-        inventory_path.unlink()
-    inventory_path.touch()
-    if inventory_data != []:
-        with inventory_path.open("w") as inventory_file:
-            yaml.dump(inventory_data, inventory_file, allow_unicode=True)
+    if sync:
+        if load_inventory_file(inventory_path):
+            inventory_path.unlink()
+        inventory_path.touch()
+        if inventory_data != []:
+            _dump_inventory_file(inventory_path, inventory_data)
+    elif remove:
+        inv = load_inventory_file(inventory_path)
+        _dump_inventory_file(inventory_path, [alloc for alloc in inv if uuid not in alloc["uuid"]])
+    else:
+        current_allocation = next(
+            iter([alloc for alloc in inventory_data if alloc["uuid"] == uuid])
+        )
+        inv = load_inventory_file(inventory_path)
+        uuids = [alloc["uuid"] for alloc in inv]
+        if current_allocation["uuid"] not in uuids:
+            _update_inventory(inventory_path, inv, current_allocation)
+        else:
+            inv = [alloc for alloc in inv if uuid not in alloc["uuid"]]
+            _update_inventory(inventory_path, inv, current_allocation)
 
 
 def fake_http_response_code(good_codes=None, bad_codes=None, fail_rate=0):
