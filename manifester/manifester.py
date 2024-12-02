@@ -170,7 +170,9 @@ class Manifester:
             cmd_kwargs=allocation_data,
         ).json()
         logger.debug(f"Received response {self.allocation} when attempting to create allocation.")
-        self.allocation_uuid = self.allocation["body"]["uuid"]
+        self.allocation_uuid = (
+            self.allocation.uuid if self.is_mock else self.allocation["body"]["uuid"]
+        )
         if self.simple_content_access == "disabled":
             simple_retry(
                 self.requester.put,
@@ -196,8 +198,6 @@ class Manifester:
             "proxies": self.manifest_data.get("proxies"),
             "params": {"force": "true"},
         }
-        if self.is_mock:
-            self.allocation_uuid = self.allocation_uuid.uuid
         response = simple_retry(
             self.requester.delete,
             cmd_args=[f"{self.allocations_url}/{uuid if uuid else self.allocation_uuid}"],
@@ -407,10 +407,7 @@ class Manifester:
         local_file.write_bytes(manifest.content)
         manifest.path = local_file
         manifest.name = self.manifest_name
-        if self.is_mock:
-            manifest.uuid = self.allocation_uuid.uuid
-        else:
-            manifest.uuid = self.allocation_uuid
+        manifest.uuid = self.allocation_uuid
         update_inventory(self.subscription_allocations, uuid=self.allocation_uuid)
         return manifest
 
