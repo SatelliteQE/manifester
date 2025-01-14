@@ -3,6 +3,7 @@
 This module defines the `Manifester` class, which provides methods for authenticating to and
 interacting with the RHSM Subscription API for the purpose of generating a subscription manifest.
 """
+from datetime import date
 from functools import cached_property
 from pathlib import Path
 import random
@@ -74,8 +75,8 @@ class Manifester:
             self.username_prefix = (
                 self.manifest_data.get("username_prefix") or settings.username_prefix
             )
-            self.allocation_name = allocation_name or f"{self.username_prefix}-" + "".join(
-                random.sample(string.ascii_letters, 8)
+            self.allocation_name = allocation_name or f"{self.username_prefix}-{date.today().strftime('%Y%m%d')}-" + "".join(
+                random.sample(string.ascii_letters, 6)
             )
             self.manifest_name = Path(f"{self.allocation_name}_manifest.zip")
             self.offline_token = self.manifest_data.get(
