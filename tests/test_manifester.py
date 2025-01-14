@@ -82,11 +82,13 @@ SUB_ALLOCATIONS_RESPONSE = {
             + "".join(random.choices(string.ascii_letters, k=8)),
             "type": "Satellite",
             "version": f"{MANIFEST_DATA['sat_version']}",
-            "entitlementQuantity": sum(d["quantity"] for d in MANIFEST_DATA["subscription_data"]),
-            "url": f"{MANIFEST_DATA['url']['allocations']}/{SUB_ALLOCATION_UUID}",
+            "entitlementsAttachedQuantity": sum(
+                d["quantity"] for d in MANIFEST_DATA["subscription_data"]
+            ),
             "simpleContentAccess": f"{MANIFEST_DATA['simple_content_access']}",
         }
-    ]
+    ],
+    "status_code": 200,
 }
 
 
@@ -148,9 +150,9 @@ class RhsmApiStub(MockStub):
                 self.pool_response["body"] += SUB_POOL_RESPONSE["body"]
                 return self
         if args[0].endswith("allocations") and self._has_offset:
-            if kwargs["params"]["offset"] != 50:
+            if kwargs["params"]["offset"] != 100:
                 self.allocations_response = {"body": []}
-                for _x in range(50):
+                for _x in range(100):
                     self.allocations_response["body"].append(
                         {
                             "uuid": f"{uuid.uuid4().hex}",
@@ -197,6 +199,15 @@ class RhsmApiStub(MockStub):
             self._good_codes = [204]
             return self
 
+    def __repr__(self):
+        """Return a string representation of the RhsmApiStub instance."""
+        inner = ", ".join(
+            f"{k}={v}"
+            for k, v in self.__dict__.items()
+            if not k.startswith("_") and not callable(v)
+        )
+        return f"{self.__class__.__name__}({inner})"
+
 
 def test_basic_init():
     """Test that manifester can initialize with the minimum required arguments."""
@@ -211,7 +222,7 @@ def test_create_allocation():
     """Test that manifester's create_subscription_allocation method returns a UUID."""
     manifester = Manifester(manifest_category=MANIFEST_DATA, requester=RhsmApiStub(in_dict=None))
     allocation_uuid = manifester.create_subscription_allocation()
-    assert allocation_uuid.uuid == SUB_ALLOCATION_UUID
+    assert allocation_uuid == SUB_ALLOCATION_UUID
 
 
 def test_negative_simple_retry_timeout():
@@ -300,7 +311,7 @@ def test_invalid_sat_version():
 def test_update_inventory():
     """Test that inventory file is populated with expected contents after updating."""
     manifester = Manifester(manifest_category=MANIFEST_DATA, requester=RhsmApiStub(in_dict=None))
-    update_inventory(manifester.subscription_allocations)
+    update_inventory(manifester.subscription_allocations, sync=True, uuid=SUB_ALLOCATION_UUID)
     assert (
         load_inventory_file(Path(MANIFEST_DATA["inventory_path"]))
         == SUB_ALLOCATIONS_RESPONSE["body"]
