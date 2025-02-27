@@ -71,6 +71,8 @@ def fetch_paginated_data(manifester, endpoint):
         MAX_RESULTS_PER_PAGE = 100
     elif endpoint == "pools":
         _endpoint_url = f"{manifester.allocations_url}/{manifester.allocation_uuid}/pools"
+        if "stage" in manifester.allocations_url:
+            _endpoint_url = _endpoint_url + "?future=true"
         _endpoint_data = manifester._subscription_pools
         MAX_RESULTS_PER_PAGE = 50
     else:
