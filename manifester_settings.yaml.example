@@ -2,6 +2,7 @@
 inventory_path: "manifester_inventory.yaml"
 log_level: "info"
 max_export_retries: 5
+max_retry_timeout: 240
 offline_token: ""
 proxies: {"https": ""}
 url:

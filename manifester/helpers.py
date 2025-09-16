@@ -18,8 +18,10 @@ from manifester.settings import settings
 RESULTS_LIMIT = 10000
 
 
-def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=240, _cur_timeout=1):
+def simple_retry(cmd, cmd_args=None, cmd_kwargs=None, max_timeout=None, _cur_timeout=1):
     """Re(Try) a function given its args and kwargs up until a max timeout."""
+    if max_timeout is None:
+        max_timeout = settings.get("max_retry_timeout", 240)
     cmd_args = cmd_args if cmd_args else []
     cmd_kwargs = cmd_kwargs if cmd_kwargs else {}
     # If additional debug information is needed, the following log entry can be modified to
