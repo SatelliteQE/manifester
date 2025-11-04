@@ -22,7 +22,7 @@ pip install .
 
 The `manifester_settings.yaml` file is used to configure manifester via [DynaConf](https://github.com/rochacbruno/dynaconf/).
 
-Multiple types of manifests can be configured in the `manifest_category` section of `manifester_settings.yaml`. These types can be differentiated based on the Satellite version of the subscription allocation, the names and quantities of the subscriptions to be added to the manifest, and whether [Simple Content Access](https://access.redhat.com/documentation/en-us/subscription_central/2021/html-single/getting_started_with_simple_content_access/index) is enabled on the manifest.
+Multiple types of manifests can be configured in the `manifest_category` section of `manifester_settings.yaml`. These types can be differentiated based on the Satellite version of the subscription allocation or on the names and quantities of the subscriptions to be added to the manifest.
 
 The value of the `name` setting for each subscription in a manifest must exactly match the name of a subscription available in the account which was used to generate the offline token. One method for determining the subscription names available in an account is to register a system to RHSM and then run `subscription manager list --available` on that system. A planned future feature of Manifester is a CLI command that will return a list of available subscriptions.
 
@@ -48,7 +48,6 @@ $ manifester inventory --details
 0:
     entitlementQuantity: 4
     name: user-mBIojPMF
-    simpleContentAccess: enabled
     type: Satellite
     url: https://api.access.redhat.com/management/v1/allocations/2ea75142-8ea4-46db-87e3-1feab8613000
     uuid: 2ef73132-83a4-473b-97e3-1feab8623000

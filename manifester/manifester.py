@@ -87,9 +87,6 @@ class Manifester:
                 "client_id": "rhsm-api",
                 "refresh_token": self.offline_token,
             }
-            self.simple_content_access = kwargs.get(
-                "simple_content_access", self.manifest_data.simple_content_access
-            )
             self.token_request_url = self.manifest_data.get("url").get("token_request")
             self.allocations_url = self.manifest_data.get("url").get("allocations")
             self._access_token = None
@@ -161,7 +158,6 @@ class Manifester:
             "params": {
                 "name": f"{self.allocation_name}",
                 "version": f"{self.sat_version}",
-                "simpleContentAccess": f"{self.simple_content_access}",
             },
         }
         self.allocation = simple_retry(
@@ -173,16 +169,6 @@ class Manifester:
         self.allocation_uuid = (
             self.allocation.uuid if self.is_mock else self.allocation["body"]["uuid"]
         )
-        if self.simple_content_access == "disabled":
-            simple_retry(
-                self.requester.put,
-                cmd_args=[f"{self.allocations_url}/{self.allocation_uuid}"],
-                cmd_kwargs={
-                    "headers": {"Authorization": f"Bearer {self.access_token}"},
-                    "proxies": self.manifest_data.get("proxies"),
-                    "json": {"simpleContentAccess": "disabled"},
-                },
-            )
         logger.info(
             f"Subscription allocation created with name {self.allocation_name} "
             f"and UUID {self.allocation_uuid}"
