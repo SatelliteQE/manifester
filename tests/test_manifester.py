@@ -45,7 +45,6 @@ MANIFEST_DATA = {
             "quantity": 1,
         },
     ],
-    "simple_content_access": "enabled",
 }
 
 SUB_POOL_RESPONSE = {
@@ -84,7 +83,6 @@ SUB_ALLOCATIONS_RESPONSE = {
             "entitlementsAttachedQuantity": sum(
                 d["quantity"] for d in MANIFEST_DATA["subscription_data"]
             ),
-            "simpleContentAccess": f"{MANIFEST_DATA['simple_content_access']}",
         }
     ],
     "status_code": 200,
@@ -267,7 +265,6 @@ def test_ingest_manifest_data_via_dict():
     """Test that manifester is able to read configuration data from a dictionary."""
     manifester = Manifester(manifest_category=MANIFEST_DATA, requester=RhsmApiStub(in_dict=None))
     assert manifester.subscription_data == MANIFEST_DATA["subscription_data"]
-    assert manifester.simple_content_access == MANIFEST_DATA["simple_content_access"]
     assert manifester.token_request_url == MANIFEST_DATA["url"]["token_request"]
     assert manifester.allocations_url == MANIFEST_DATA["url"]["allocations"]
     assert manifester.sat_version == MANIFEST_DATA["sat_version"]

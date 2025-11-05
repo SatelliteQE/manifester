@@ -14,7 +14,7 @@ manifest_category:
     # An offline token can be generated at https://access.redhat.com/management/api
     offline_token: ""
     # Value of sat_version setting should be in the form 'sat-6.14'
-    sat_version: "sat-6.14"
+    sat_version: "sat-6.18"
     # golden_ticket manifests should not use a quantity higher than 1 for any subscription
     # unless doing so is required for a test.
     subscription_data:
@@ -23,20 +23,6 @@ manifest_category:
         quantity: 1
       - name: "Red Hat Ansible Automation Platform, Standard (100 Managed Nodes)"
         quantity: 1
-    simple_content_access: "enabled"
-    url:
-      token_request: "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
-      allocations: "https://api.access.redhat.com/management/v1/allocations"
-    proxies: {"https": ""}
-  robottelo_automation:
-    offline_token: ""
-    sat_version: "sat-6.14"
-    subscription_data:
-      - name: "Software Collections and Developer Toolset"
-        quantity: 3
-      - name: "Red Hat Ansible Automation Platform, Standard (100 Managed Nodes)"
-        quantity: 2
-    simple_content_access: "disabled"
     url:
       token_request: "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
       allocations: "https://api.access.redhat.com/management/v1/allocations"
