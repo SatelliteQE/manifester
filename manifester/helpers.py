@@ -141,6 +141,10 @@ def fetch_paginated_data(manifester, endpoint):
             _results = len(offset_data["body"])
             total_results = len(_endpoint_data["body"])
             logger.debug(f"Total {endpoint} available on this account: {total_results}")
+        if endpoint == "allocations":
+            manifester._allocations = _endpoint_data
+        elif endpoint == "pools":
+            manifester._subscription_pools = _endpoint_data
     if endpoint == "allocations":
         if hasattr(_endpoint_data, "force_export_failure"):
             return [
