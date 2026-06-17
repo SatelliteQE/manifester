@@ -1,4 +1,5 @@
 """Defines helper functions used by Manifester."""
+
 from collections import UserDict
 import json
 import os
