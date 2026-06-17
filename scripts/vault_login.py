@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Enables and Disables an OIDC token to access secrets from HashiCorp Vault."""
+
 import sys
 
 from manifester.helpers import Vault

@@ -1,4 +1,5 @@
 """Defines the CLI commands for Manifester."""
+
 import os
 from pathlib import Path
 

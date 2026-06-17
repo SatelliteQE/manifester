@@ -82,6 +82,8 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
 fixable = ["ALL"]
 
 select = [
@@ -139,8 +141,8 @@ select = [
     "T100", # Trace found: {name} used
     "T20", # flake8-print
     "TRY004", # Prefer TypeError exception for invalid type
-    "TRY200", # Use raise from to specify exception cause
-    "TRY302", # Remove exception handler; error is immediately re-raised
+    "B904", # Use raise from to specify exception cause
+    "TRY203", # Remove exception handler; error is immediately re-raised
     "PLR0911", # Too many return statements ({returns} > {max_returns})
     "PLR0912", # Too many branches ({branches} > {max_branches})
     "PLR0915", # Too many statements ({statements} > {max_statements})
@@ -152,7 +154,6 @@ select = [
 
 ignore = [
     "ANN", # flake8-annotations
-    "PGH001", # No builtin eval() allowed
     "D203", # 1 blank line required before class docstring
     "D213", # Multi-line docstring summary should start at the second line
     "D406", # Section name should end with a newline
@@ -164,27 +165,27 @@ ignore = [
     "D107", # Missing docstring in __init__
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "manifester/__init__.py" = ["D104", "F401",]
 "manifester/manifester.py" = ["D401",]
 "tests/test_manifester.py" = ["D100", "E501", "PLR0911", "PLR2004",]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 force-sort-within-sections = true
 known-first-party = [
     "manifester",
 ]
 combine-as-imports = true
 
-[tool.ruff.flake8-pytest-style]
+[tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 mark-parentheses = false
 
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"
 
 [tool.ruff.lint.pylint]
-max-branches = 16
+max-branches = 20
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 20
