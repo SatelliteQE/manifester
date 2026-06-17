@@ -137,7 +137,7 @@ class RhsmApiStub(MockStub):
                 for _x in range(50):
                     self.pool_response["body"].append(
                         {
-                            "id": f'{"".join(random.sample(string.ascii_letters, 12))}',
+                            "id": f"{''.join(random.sample(string.ascii_letters, 12))}",
                             "subscriptionName": "Red Hat Satellite Infrastructure Subscription",
                             "entitlementsAvailable": random.randrange(100),
                         }
@@ -153,7 +153,7 @@ class RhsmApiStub(MockStub):
                     self.allocations_response["body"].append(
                         {
                             "uuid": f"{uuid.uuid4().hex}",
-                            "name": f'{"".join(random.sample(string.ascii_letters, 12))}',
+                            "name": f"{''.join(random.sample(string.ascii_letters, 12))}",
                         }
                     )
                 return self

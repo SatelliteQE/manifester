@@ -1,4 +1,5 @@
 """Module with settings variables/constants."""
+
 import os
 from pathlib import Path
 

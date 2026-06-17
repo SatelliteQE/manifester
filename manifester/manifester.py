@@ -3,12 +3,14 @@
 This module defines the `Manifester` class, which provides methods for authenticating to and
 interacting with the RHSM Subscription API for the purpose of generating a subscription manifest.
 """
+
 from functools import cached_property
 from pathlib import Path
 import random
 import string
 
 from dynaconf.utils.boxing import DynaBox
+import requests
 from requests.exceptions import RequestException
 
 from manifester.helpers import (
@@ -54,8 +56,6 @@ class Manifester:
                 self.requester = kwargs["requester"]
                 self.is_mock = True
             else:
-                import requests
-
                 self.requester = requests
                 self.is_mock = False
         else:
@@ -67,8 +67,6 @@ class Manifester:
                 self.requester = kwargs["requester"]
                 self.is_mock = True
             else:
-                import requests
-
                 self.requester = requests
                 self.is_mock = False
             self.username_prefix = (
