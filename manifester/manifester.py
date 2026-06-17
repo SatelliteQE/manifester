@@ -93,6 +93,8 @@ class Manifester:
             self._allocations = None
             self._subscription_pools = None
             self._active_pools = []
+            self.allocation_uuid = None
+            self.attached_quantity = 0
             self.sat_version = process_sat_version(
                 kwargs.get("sat_version", self.manifest_data.sat_version),
                 self.valid_sat_versions,
@@ -178,6 +180,10 @@ class Manifester:
 
     def delete_subscription_allocation(self, uuid=None):
         """Deletes the specified subscription allocation and returns the RHSM API's response."""
+        target_uuid = uuid or self.allocation_uuid
+        if not target_uuid:
+            logger.warning("No allocation UUID available, skipping deletion.")
+            return None
         self._access_token = None
         data = {
             "headers": {"Authorization": f"Bearer {self.access_token}"},
@@ -186,11 +192,11 @@ class Manifester:
         }
         response = simple_retry(
             self.requester.delete,
-            cmd_args=[f"{self.allocations_url}/{uuid if uuid else self.allocation_uuid}"],
+            cmd_args=[f"{self.allocations_url}/{target_uuid}"],
             cmd_kwargs=data,
         )
         update_inventory(
-            self.subscription_allocations, remove=True, uuid=uuid if uuid else self.allocation_uuid
+            self.subscription_allocations, remove=True, uuid=target_uuid
         )
         return response
 
